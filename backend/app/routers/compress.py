@@ -1,14 +1,20 @@
 import os
 import uuid
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks
+import time
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks, Depends
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any
+from sqlalchemy.orm import Session
 
+from app.database.connection import get_db
+from app.repository.history_repo import HistoryRepository
+from app.repository.settings_repo import SettingsRepository
+from app.services.ffmpeg_service import FFmpegService
+from app.services.queue_manager import QueueManager
 from app.services.video import (
     get_video_metadata,
     generate_thumbnail,
-    compress_video_async,
     suspend_compression,
     resume_compression,
     kill_compression,
@@ -17,27 +23,28 @@ from app.services.video import (
     get_ffprobe_path
 )
 from app.utils.storage import UPLOADS_DIR, COMPRESSED_DIR, delete_file_safe
-from app.database import add_history_entry, update_history_entry
 
 router = APIRouter(prefix="/api")
 
 class CompressionOptions(BaseModel):
     file_id: str
-    preset: str = "medium"  # "fast", "medium", "slow"
+    preset: str = "medium"
     crf: Optional[int] = None
     video_bitrate: Optional[str] = None
     audio_bitrate: Optional[str] = None
     width: Optional[int] = None
     height: Optional[int] = None
     fps: Optional[float] = None
+    task_type: str = "compression" # "compression", "gif_conversion", "audio_extraction", "watermark"
+    audio_codec: Optional[str] = "mp3"
 
 class ControlRequest(BaseModel):
     task_id: str
-    action: str = Field(..., description="Action to perform: pause, resume, cancel")
+    action: str = Field(..., description="Action: pause, resume, cancel")
 
 @router.get("/health")
 def health_check():
-    """Checks the system health, FFmpeg availability, and hardware utilization."""
+    """Checks system metrics and executable binaries verification."""
     import psutil
     
     ffmpeg_avail = False
@@ -79,10 +86,7 @@ def health_check():
 
 @router.post("/metadata")
 async def get_metadata_endpoint(file: UploadFile = File(...)):
-    """
-    Receives an uploaded video file, saves it, extracts metadata and generates a thumbnail.
-    """
-    # Verify extension
+    """Saves uploaded files temporarily, parses video specs, and renders thumbnail."""
     ext = os.path.splitext(file.filename)[1].lower()
     if ext not in [".mp4", ".mov", ".avi", ".mkv"]:
         raise HTTPException(
@@ -90,14 +94,12 @@ async def get_metadata_endpoint(file: UploadFile = File(...)):
             detail=f"Unsupported format '{ext}'. Only MP4, MOV, AVI, and MKV are allowed."
         )
         
-    # Create unique file ID
     file_id = str(uuid.uuid4())
     video_filename = f"{file_id}{ext}"
     video_path = os.path.join(UPLOADS_DIR, video_filename)
     thumbnail_filename = f"{file_id}.jpg"
     thumbnail_path = os.path.join(UPLOADS_DIR, thumbnail_filename)
     
-    # Save the file
     try:
         with open(video_path, "wb") as f:
             content = await file.read()
@@ -105,7 +107,6 @@ async def get_metadata_endpoint(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save upload: {str(e)}")
         
-    # Read metadata & generate thumbnail
     try:
         metadata = get_video_metadata(video_path)
     except Exception as e:
@@ -115,7 +116,6 @@ async def get_metadata_endpoint(file: UploadFile = File(...)):
             detail=f"Invalid or corrupted video file: {str(e)}"
         )
         
-    # Generate thumbnail
     thumbnail_success = generate_thumbnail(video_path, thumbnail_path, metadata.get("duration", 0.0))
     thumbnail_url = f"/api/static/{thumbnail_filename}" if thumbnail_success else None
     
@@ -127,13 +127,10 @@ async def get_metadata_endpoint(file: UploadFile = File(...)):
     }
 
 @router.post("/compress")
-async def start_compression(options: CompressionOptions, background_tasks: BackgroundTasks):
-    """
-    Enqueues a file for compression using the provided options. Runs FFmpeg asynchronously in the background.
-    """
+async def start_compression(options: CompressionOptions, db: Session = Depends(get_db)):
+    """Enqueues video, audio, or GIF processing jobs inside our queue worker manager."""
     file_id = options.file_id
     
-    # Locate original video
     input_file = None
     ext = ""
     for item in os.listdir(UPLOADS_DIR):
@@ -147,10 +144,17 @@ async def start_compression(options: CompressionOptions, background_tasks: Backg
         
     input_path = os.path.join(UPLOADS_DIR, input_file)
     task_id = str(uuid.uuid4())
-    output_filename = f"compressed_{task_id}{ext}"
+    
+    # Map output file extension
+    out_ext = ext
+    if options.task_type == "gif_conversion":
+        out_ext = ".gif"
+    elif options.task_type == "audio_extraction":
+        out_ext = f".{options.audio_codec or 'mp3'}"
+        
+    output_filename = f"compressed_{task_id}{out_ext}"
     output_path = os.path.join(COMPRESSED_DIR, output_filename)
     
-    # Fetch metadata for size and duration mapping
     try:
         meta = get_video_metadata(input_path)
         duration = meta["duration"]
@@ -159,13 +163,24 @@ async def start_compression(options: CompressionOptions, background_tasks: Backg
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to read file info: {str(e)}")
         
-    # Save base info in SQLite
-    try:
-        add_history_entry(task_id, filename, original_size, duration, status="processing")
-    except Exception as e:
-        print(f"Database error writing log: {e}")
-        
-    # Initialize task state in memory
+    # Query database settings config
+    settings_repo = SettingsRepository(db)
+    settings_repo.initialize_defaults()
+    enable_watermark = settings_repo.get("enable_watermark") == "true"
+    watermark_text = settings_repo.get("watermark_text") if enable_watermark else None
+    
+    # Record database entry
+    history_repo = HistoryRepository(db)
+    history_repo.add(
+        task_id=task_id, 
+        filename=filename, 
+        original_size=original_size, 
+        duration=duration, 
+        status="pending",
+        task_type=options.task_type
+    )
+    
+    # Memory progress log initialization
     active_tasks[task_id] = {
         "status": "pending",
         "progress": 0.0,
@@ -179,28 +194,50 @@ async def start_compression(options: CompressionOptions, background_tasks: Backg
         "process": None
     }
     
-    # Define worker callbacks
     def on_success(compressed_size: int, compression_time: float):
-        saved = round(((original_size - compressed_size) / original_size) * 100.0, 1)
-        update_history_entry(task_id, compressed_size, saved, compression_time, "completed")
-        # Safely delete original upload video file to free space
+        saved = round(((original_size - compressed_size) / original_size) * 100.0, 1) if original_size > 0 else 0.0
+        # Access localized db connection for background thread tasks
+        db_thread = next(get_db())
+        try:
+            h_repo = HistoryRepository(db_thread)
+            h_repo.update(task_id, compressed_size, saved, compression_time, "completed")
+        finally:
+            db_thread.close()
         delete_file_safe(input_path)
         
     def on_failure(error_msg: str):
-        update_history_entry(task_id, 0, 0.0, 0.0, "failed")
+        db_thread = next(get_db())
+        try:
+            h_repo = HistoryRepository(db_thread)
+            h_repo.update(task_id, 0, 0.0, 0.0, "failed")
+        finally:
+            db_thread.close()
         delete_file_safe(output_path)
         
-    # Start thread
-    background_tasks.add_task(
-        compress_video_async,
-        task_id=task_id,
-        input_path=input_path,
-        output_path=output_path,
-        options=options.model_dump(),
-        duration=duration,
-        on_success=on_success,
-        on_failure=on_failure
-    )
+    def run_worker_task():
+        if options.task_type == "gif_conversion":
+            cmd = FFmpegService.build_gif_cmd(input_path, output_path)
+        elif options.task_type == "audio_extraction":
+            cmd = FFmpegService.build_audio_extraction_cmd(input_path, output_path, options.audio_codec or "mp3")
+        else: # compression or watermark
+            watermark_img_path = None
+            if options.task_type == "watermark":
+                # Default graphic watermark image located in logo/icons/icon_dark_128x128.png
+                logo_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "logo", "icons")
+                watermark_img_path = os.path.join(logo_dir, "icon_dark_128x128.png")
+                if not os.path.exists(watermark_img_path):
+                    watermark_img_path = None
+            cmd = FFmpegService.build_compression_cmd(
+                input_path=input_path,
+                output_path=output_path,
+                options=options.model_dump(),
+                watermark_img_path=watermark_img_path,
+                watermark_text=watermark_text
+            )
+        FFmpegService.run_ffmpeg_task(task_id, cmd, duration, on_success, on_failure)
+        
+    # Push job to QueueManager
+    QueueManager().add_task(task_id, run_worker_task)
     
     return {
         "task_id": task_id,
@@ -209,13 +246,10 @@ async def start_compression(options: CompressionOptions, background_tasks: Backg
 
 @router.get("/compress/status/{task_id}")
 def get_status(task_id: str):
-    """Polls the realtime status of a compression task."""
+    """Fetches progress logs of active queues."""
     if task_id not in active_tasks:
         raise HTTPException(status_code=404, detail="Task not found or state cleared.")
-        
     task = active_tasks[task_id]
-    
-    # Return formatted progress
     return {
         "task_id": task_id,
         "status": task["status"],
@@ -229,8 +263,8 @@ def get_status(task_id: str):
     }
 
 @router.post("/compress/control")
-def control_task(req: ControlRequest):
-    """Executes a command on an active task: pause, resume, or cancel."""
+def control_task(req: ControlRequest, db: Session = Depends(get_db)):
+    """Pause, resume, or cancel queued actions."""
     action = req.action.lower()
     task_id = req.task_id
     
@@ -250,49 +284,50 @@ def control_task(req: ControlRequest):
         return {"task_id": task_id, "status": "processing"}
         
     elif action == "cancel":
-        # Delete output file immediately
         task = active_tasks[task_id]
-        success = kill_compression(task_id)
-        
-        # Cleanup files
+        kill_compression(task_id)
         delete_file_safe(task.get("input_path"))
         delete_file_safe(task.get("output_path"))
         
-        # Log cancellation in SQLite history
-        update_history_entry(task_id, 0, 0.0, 0.0, "cancelled")
-        
+        repo = HistoryRepository(db)
+        repo.update(task_id, 0, 0.0, 0.0, "cancelled")
         return {"task_id": task_id, "status": "cancelled"}
-        
     else:
         raise HTTPException(status_code=400, detail=f"Invalid action '{action}'.")
 
 def delete_after_download(output_path: str, task_id: str):
-    """Safely cleans up compression task resources from disks and lists."""
-    time.sleep(2)  # short buffer to guarantee response stream completes
+    time.sleep(2)
     delete_file_safe(output_path)
-    # Clear in memory state
     if task_id in active_tasks:
         active_tasks.pop(task_id, None)
 
 @router.get("/download/{task_id}")
 def download_output(task_id: str, background_tasks: BackgroundTasks):
-    """Serves the compressed file and schedules absolute cleanup afterward."""
+    """Serves the output file and registers automatic background cleanup."""
     if task_id not in active_tasks:
         raise HTTPException(status_code=404, detail="Download expired or not found.")
-        
     task = active_tasks[task_id]
     if task["status"] != "completed":
-        raise HTTPException(status_code=400, detail=f"Video is not ready. Status: {task['status']}")
+        raise HTTPException(status_code=400, detail=f"File is not ready. Status: {task['status']}")
         
     output_path = task["output_path"]
     if not os.path.exists(output_path):
-        raise HTTPException(status_code=410, detail="File is already cleaned up or deleted.")
+        raise HTTPException(status_code=410, detail="File has already been cleaned up.")
         
-    # Queue auto-cleanup of the output file after response transmission
     background_tasks.add_task(delete_after_download, output_path, task_id)
     
+    # Map correct media type and file extensions
+    ext = os.path.splitext(output_path)[1].lower()
+    media_type = "video/mp4"
+    if ext == ".gif":
+        media_type = "image/gif"
+    elif ext == ".mp3":
+        media_type = "audio/mpeg"
+    elif ext == ".aac":
+        media_type = "audio/aac"
+        
     return FileResponse(
         path=output_path,
-        media_type="video/mp4",
+        media_type=media_type,
         filename=f"compressed_{task['filename']}"
     )

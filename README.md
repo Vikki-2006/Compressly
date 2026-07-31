@@ -63,23 +63,6 @@ Compress videos locally with real-time progress, advanced FFmpeg controls, analy
 
 ---
 
-# 📸 Preview
-
-## Landing Page
-
-<p align="center">
-<img src="./assets/landing.png" width="100%">
-</p>
-
----
-
-## Compression Dashboard
-
-<p align="center">
-<img src="./assets/dashboard.png" width="100%">
-</p>
-
----
 
 # 🏗 Architecture
 

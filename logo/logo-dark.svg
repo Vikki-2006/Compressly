@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 512" fill="none">
+  <g transform="translate(100, 100) scale(0.61)">
+    <!-- Rounded border -->
+    <rect x="32" y="32" width="448" height="448" rx="96" stroke="#FFFFFF" stroke-width="36" stroke-linejoin="round" />
+    <!-- Left inward arrow (pointing right) -->
+    <path d="M38 216 H180 L120 110 L220 256 L120 402 L180 296 H38 Z" fill="#FFFFFF" />
+    <!-- Right inward arrow (pointing left) -->
+    <path d="M474 216 H332 L392 110 L292 256 L392 402 L332 296 H474 Z" fill="#FFFFFF" />
+    <!-- Left center curve bowing left -->
+    <path d="M242 190 Q226 256 242 322" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round" fill="none" />
+    <!-- Right center curve bowing right -->
+    <path d="M270 190 Q286 256 270 322" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round" fill="none" />
+  </g>
+  <text x="460" y="296" font-family="'Inter', 'Segoe UI', 'sans-serif'" font-size="124" font-weight="800" letter-spacing="-4" fill="#FFFFFF">Compressly</text>
+</svg>

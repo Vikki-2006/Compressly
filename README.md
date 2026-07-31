@@ -1,176 +1,314 @@
-# Compressly ⚡
+<p align="center">
+  <img src="./logo/logo-dark.svg" width="150" alt="Compressly Logo">
+</p>
 
-**Compressly** is a beautiful, modern, and privacy-focused full-stack video compressor. It is designed to optimize media assets locally on your server or workstation without uploading files to insecure third-party cloud APIs.
+<h1 align="center">Compressly</h1>
+
+<p align="center">
+A modern, privacy-first video compression platform powered by FastAPI, React, JavaScript, and FFmpeg.
+</p>
+
+<p align="center">
+Compress videos locally with real-time progress, advanced FFmpeg controls, analytics, and zero cloud uploads.
+</p>
+
+<p align="center">
+
+<img src="https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white">
+
+<img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white">
+
+<img src="https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=black">
+
+<img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black">
+
+<img src="https://img.shields.io/badge/TailwindCSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white">
+
+<img src="https://img.shields.io/badge/FFmpeg-007808?style=for-the-badge&logo=ffmpeg&logoColor=white">
+
+<img src="https://img.shields.io/badge/SQLite-003B57?style=for-the-badge&logo=sqlite&logoColor=white">
+
+<img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white">
+
+</p>
+
+<p align="center">
+
+<img src="https://img.shields.io/github/stars/Vikki-2006/Compressly?style=flat-square">
+
+<img src="https://img.shields.io/github/forks/Vikki-2006/Compressly?style=flat-square">
+
+<img src="https://img.shields.io/github/issues/Vikki-2006/Compressly?style=flat-square">
+
+<img src="https://img.shields.io/github/license/Vikki-2006/Compressly?style=flat-square">
+
+</p>
 
 ---
 
-## 🚀 Features
+# ✨ Features
 
-- **Local & Offline Processing:** Everything runs locally on your workstation using Python, FastAPI, and FFmpeg. Files are processed within your private sandbox.
-- **Drag & Drop Multi-file Queue:** Queue up multiple video clips in parallel and execute compression sequential jobs smoothly.
-- **Real-Time Progress & Process Control:** Monitor encoding speeds, elapsed times, and ETAs. Pause, resume, or cancel active encoding subprocesses instantly.
-- **Custom SVG Chart Reports:** Visually compare original sizes versus compressed sizes with interactive dashboard metrics.
-- **Presets & Advanced Sliders:** Click-and-go balanced presets, or open the Advanced Options to adjust Video CRF, Audio/Video bitrates, output resolution, and frame rates.
-- **SQLite Log History:** Stored records keep track of saved space and encoding metrics in a local SQL database.
-- **Responsive Theme Modes:** Premium design aesthetic styled with Tailwind CSS, supporting seamless Light and Dark mode transitions.
-- **Automatic Stale-File Purge:** Uploaded materials and outputs are automatically deleted from host storage upon download or after 30 minutes.
-
----
-
-## 🛠️ Tech Stack
-
-### Frontend
-- **Framework:** React + Vite + TypeScript (v5)
-- **Styling:** Tailwind CSS + PostCSS
-- **Animation:** Framer Motion (for fluid transitions and layouts)
-- **Icons:** Lucide React
-
-### Backend
-- **Framework:** FastAPI (Python 3.11+)
-- **Processing Engine:** FFmpeg + FFprobe
-- **Database:** SQLite3
-- **Process Manager:** `psutil` (for process suspending and resuming)
+- 🎬 Local & Offline Video Compression
+- ⚡ High-performance FastAPI backend
+- 📂 Drag & Drop multi-file uploads
+- 📊 Live compression progress
+- ⏸ Pause / Resume / Cancel processing
+- 🎚 Advanced FFmpeg controls
+- 📉 Compression statistics & analytics
+- 📜 Compression history
+- 🌙 Dark & Light themes
+- 🔒 Privacy-first local processing
+- ⚙ Docker deployment
+- 🗑 Automatic temporary file cleanup
 
 ---
 
-## 📦 Folder Structure
+# 📸 Preview
+
+## Landing Page
+
+<p align="center">
+<img src="./assets/landing.png" width="100%">
+</p>
+
+---
+
+## Compression Dashboard
+
+<p align="center">
+<img src="./assets/dashboard.png" width="100%">
+</p>
+
+---
+
+# 🏗 Architecture
+
+```
+                React Frontend
+                       │
+                       │ REST API
+                       ▼
+             FastAPI Backend
+                       │
+        ┌──────────────┴──────────────┐
+        │                             │
+        ▼                             ▼
+     FFmpeg Engine               SQLite Database
+        │                             │
+        ▼                             ▼
+ Video Compression           History & Analytics
+```
+
+---
+
+# 🛠 Tech Stack
+
+## Frontend
+
+- React
+- JavaScript
+- Vite
+- Tailwind CSS
+- Framer Motion
+
+---
+
+## Backend
+
+- Python
+- FastAPI
+- Pydantic
+- SQLite
+- FFmpeg
+- FFprobe
+- psutil
+
+---
+
+## DevOps
+
+- Docker
+- Docker Compose
+- GitHub Actions
+
+---
+
+# 📂 Project Structure
 
 ```
 Compressly/
-├── backend/                  # FastAPI python backend api
+
+├── backend/
 │   ├── app/
-│   │   ├── routers/          # Routes (compress.py, history.py)
-│   │   ├── services/         # Services (video.py - FFmpeg workers)
-│   │   ├── utils/            # Utilities (storage.py - cleanup)
-│   │   ├── database.py       # SQLite database logic
-│   │   └── main.py           # FastAPI entrypoint
-│   ├── tests/                # Test suite (test_api.py)
-│   ├── requirements.txt      # Python dependencies
-│   ├── run.py                # Server startup script
-│   └── Dockerfile            # Container configs
-├── frontend/                 # Vite React frontend
+│   │   ├── routers/
+│   │   ├── services/
+│   │   ├── models/
+│   │   ├── schemas/
+│   │   ├── middleware/
+│   │   ├── database/
+│   │   └── main.py
+│   │
+│   ├── tests/
+│   ├── requirements.txt
+│   └── run.py
+│
+├── frontend/
 │   ├── src/
-│   │   ├── components/       # Components (Charts, Navbar, Footer)
-│   │   ├── context/          # State providers (ThemeContext)
-│   │   ├── pages/            # Page layouts (Landing, AppMain, Settings, About, Privacy)
-│   │   ├── App.tsx           # Global routing and shortcut setup
-│   │   └── index.css         # Styling and HSL variable configs
-│   ├── public/               # Favicons and graphics
-│   ├── package.json          # Node dependencies
-│   └── Dockerfile            # Multi-stage nginx builder
-├── uploads/                  # Input file storage directory
-├── compressed/               # Optimized output storage directory
-├── temp/                     # Processing workspace folder
-├── docker-compose.yml        # Orchestration script
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── hooks/
+│   │   ├── context/
+│   │   └── assets/
+│   │
+│   ├── public/
+│   └── package.json
+│
+├── uploads/
+├── compressed/
+├── temp/
+├── logo/
+├── docker-compose.yml
 └── README.md
 ```
 
 ---
 
-## ⚙️ Installation & Setup
+# 🚀 Quick Start
 
-### Prerequisites
+## Clone Repository
 
-Compressly requires **FFmpeg** and **FFprobe** to be installed on your system.
+```bash
+git clone https://github.com/Vikki-2006/Compressly.git
 
-#### Installing FFmpeg
-
-- **Windows (using winget):**
-  ```powershell
-  winget install "FFmpeg (Essentials)"
-  ```
-- **macOS (using homebrew):**
-  ```bash
-  brew install ffmpeg
-  ```
-- **Linux (Debian/Ubuntu):**
-  ```bash
-  sudo apt-get update && sudo apt-get install -y ffmpeg
-  ```
+cd Compressly
+```
 
 ---
 
-### Running with Docker (Recommended)
+# Docker
 
-Docker automatically bundles FFmpeg, Python, and Node, running the system seamlessly out-of-the-box.
+```bash
+docker compose up --build
+```
 
-1. Ensure Docker and Docker Compose are installed.
-2. In the project root, run:
-   ```bash
-   docker-compose up --build
-   ```
-3. Open your browser to `http://localhost:3000` to launch the workspace dashboard.
+Application
 
----
-
-### Manual Setup (Local Development)
-
-#### 1. Setup Backend
-1. Open a terminal and navigate to the backend directory:
-   ```bash
-   cd backend
-   ```
-2. Create and activate a Python virtual environment:
-   ```bash
-   python -m venv venv
-   # On Windows:
-   .\venv\Scripts\activate
-   # On Mac/Linux:
-   source venv/bin/activate
-   ```
-3. Install Python dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. Start the backend dev server:
-   ```bash
-   python run.py
-   ```
-   *The API will start running on `http://localhost:8000`.*
-
-#### 2. Setup Frontend
-1. Open another terminal and navigate to the frontend directory:
-   ```bash
-   cd frontend
-   ```
-2. Install npm dependencies:
-   ```bash
-   npm install
-   ```
-3. Start the Vite development workspace:
-   ```bash
-   npm run dev
-   ```
-   *The UI will launch on `http://localhost:5173` (or similar).*
+```
+http://localhost:3000
+```
 
 ---
 
-## 📡 API Endpoints
+# Backend
+
+```bash
+cd backend
+
+python -m venv venv
+
+# Windows
+venv\Scripts\activate
+
+# Linux/macOS
+source venv/bin/activate
+
+pip install -r requirements.txt
+
+python run.py
+```
+
+Backend
+
+```
+http://localhost:8000
+```
+
+---
+
+# Frontend
+
+```bash
+cd frontend
+
+npm install
+
+npm run dev
+```
+
+Frontend
+
+```
+http://localhost:5173
+```
+
+---
+
+# 📡 API
 
 | Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `GET` | `/api/health` | Inspect server CPU/RAM health and FFmpeg paths. |
-| `POST` | `/api/metadata` | Upload video file and return file specs + thumbnail. |
-| `POST` | `/api/compress` | Trigger background async compression task. |
-| `GET` | `/api/compress/status/{task_id}` | Poll encoding percentages, speeds, and ETAs. |
-| `POST` | `/api/compress/control` | Transmit action command: `pause`, `resume`, or `cancel`. |
-| `GET` | `/api/download/{task_id}` | Download compressed file and trigger self-deletion. |
-| `GET` | `/api/history` | Query database log history logs from SQLite. |
-| `DELETE` | `/api/history/{task_id}` | Clear matching history row log. |
+|---------|----------|-------------|
+| GET | `/api/health` | Server health |
+| POST | `/api/metadata` | Read video metadata |
+| POST | `/api/compress` | Compress video |
+| GET | `/api/compress/status/{task_id}` | Compression status |
+| POST | `/api/compress/control` | Pause / Resume / Cancel |
+| GET | `/api/download/{task_id}` | Download result |
+| GET | `/api/history` | Compression history |
+| DELETE | `/api/history/{task_id}` | Delete history |
 
 ---
 
-## ⌨️ Keyboard Shortcuts
+# 🔥 Highlights
 
-Speed up your workflow using local shortcuts (press keys simultaneously):
-- `Alt + C` : Navigate to **Compressor Workspace**
-- `Alt + S` : Navigate to **Settings Panel**
-- `Alt + A` : Navigate to **About Section**
-- `Alt + P` : Navigate to **Privacy Policy**
-- `Alt + H` : Navigate back to **Home Landing Page**
+- Local-only processing
+- No cloud uploads
+- Multi-file queue
+- Background workers
+- SQLite logging
+- Interactive analytics
+- Responsive UI
+- Dark mode
+- Automatic cleanup
+- Docker ready
 
 ---
 
-## 📜 License
+# 📈 Roadmap
 
-This project is licensed under the MIT License.
+- ✅ Video Compression
+- ✅ Compression History
+- ✅ Docker Support
+- ✅ Analytics Dashboard
+- ✅ Advanced FFmpeg Controls
+- ⏳ Authentication
+- ⏳ User Profiles
+- ⏳ Batch Compression
+- ⏳ GPU Acceleration
+- ⏳ WebSocket Live Progress
+- ⏳ Cloud Storage Integrations
+
+---
+
+# 🤝 Contributing
+
+Contributions are welcome!
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push the branch
+5. Open a Pull Request
+
+---
+
+# 📄 License
+
+This project is licensed under the **MIT License**.
+
+---
+
+<p align="center">
+
+Built with ❤️ using Python, FastAPI, React, and FFmpeg.
+
+</p>

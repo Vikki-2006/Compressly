@@ -296,6 +296,6 @@ This project is licensed under the **MIT License**.
 
 <p align="center">
 
-Built with ❤️ using Python, FastAPI, React, and FFmpeg.
+Built with using Python, FastAPI, React, and FFmpeg.
 
 </p>

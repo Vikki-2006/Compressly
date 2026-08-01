@@ -41,9 +41,7 @@ Compress videos locally with real-time progress, advanced FFmpeg controls, analy
 
 <img src="https://img.shields.io/github/license/Vikki-2006/Compressly?style=flat-square">
 
-=======
 Modern, privacy-first video compression powered by FastAPI, React, JavaScript and FFmpeg.
->>>>>>> 60210d1 (docs: improve README and add GitHub README logo)
 </p>
 
 ---

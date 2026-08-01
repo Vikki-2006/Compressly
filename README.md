@@ -1,52 +1,56 @@
 <p align="center">
-
-  
   <img src="./logo/readme-logo.svg" alt="Compressly Logo" width="240">
 </p>
 
 <h1 align="center">Compressly</h1>
 
-
 <p align="center">
-Compress videos locally with real-time progress, advanced FFmpeg controls, analytics, and zero cloud uploads.
+  <strong>A modern video compression platform.</strong>
+  <br><br>
+  Compress videos locally with a beautiful React interface, a high-performance FastAPI backend,
+  real-time progress tracking, advanced FFmpeg controls, analytics, and zero cloud uploads.
 </p>
 
 <p align="center">
-
-<img src="https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white">
-
-<img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white">
-
-<img src="https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=black">
-
-<img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black">
-
-<img src="https://img.shields.io/badge/TailwindCSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white">
-
-<img src="https://img.shields.io/badge/FFmpeg-007808?style=for-the-badge&logo=ffmpeg&logoColor=white">
-
-<img src="https://img.shields.io/badge/SQLite-003B57?style=for-the-badge&logo=sqlite&logoColor=white">
-
-<img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white">
-
+  <img src="https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white">
+  <img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white">
+  <img src="https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=black">
+  <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black">
+  <img src="https://img.shields.io/badge/TailwindCSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white">
+  <img src="https://img.shields.io/badge/FFmpeg-007808?style=for-the-badge&logo=ffmpeg&logoColor=white">
+  <img src="https://img.shields.io/badge/SQLite-003B57?style=for-the-badge&logo=sqlite&logoColor=white">
+  <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white">
 </p>
 
 <p align="center">
+  <img src="https://img.shields.io/github/stars/Vikki-2006/Compressly?style=flat-square" alt="Stars">
+  <img src="https://img.shields.io/github/forks/Vikki-2006/Compressly?style=flat-square" alt="Forks">
+  <img src="https://img.shields.io/github/issues/Vikki-2006/Compressly?style=flat-square" alt="Issues">
+  <img src="https://img.shields.io/github/license/Vikki-2006/Compressly?style=flat-square" alt="License">
+</p>
 
-<img src="https://img.shields.io/github/stars/Vikki-2006/Compressly?style=flat-square">
-
-<img src="https://img.shields.io/github/forks/Vikki-2006/Compressly?style=flat-square">
-
-<img src="https://img.shields.io/github/issues/Vikki-2006/Compressly?style=flat-square">
-
-<img src="https://img.shields.io/github/license/Vikki-2006/Compressly?style=flat-square">
-
-Modern, privacy-first video compression powered by FastAPI, React, JavaScript and FFmpeg.
+<p align="center">
+  <strong>⚡ Fast • 🔒 Private • 🎬 FFmpeg Powered • 📊 Real-Time Analytics • 🐳 Docker Ready</strong>
 </p>
 
 ---
 
-# ✨ Features
+## ✨ Why Compressly?
+
+Compressly is a full-stack video compression platform that combines the power of **FFmpeg** with a modern **React + FastAPI** architecture. Unlike cloud-based compressors, every file is processed **locally**, giving you complete privacy, faster performance, and full control over your media.
+
+**Key capabilities**
+
+- 🎬 Local & offline video compression
+- ⚡ High-performance FastAPI backend
+- 📂 Drag & drop multi-file queue
+- 📊 Live compression progress
+- ⏸ Pause, resume & cancel processing
+- 🎚 Advanced FFmpeg settings
+- 📈 Compression analytics & history
+- 🌙 Light & Dark mode
+- 🔒 Zero cloud uploads
+- 🐳 Docker support
 
 - 🎬 Local & Offline Video Compression
 - ⚡ High-performance FastAPI backend

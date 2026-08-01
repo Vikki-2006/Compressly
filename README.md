@@ -1,10 +1,15 @@
 <p align="center">
+<<<<<<< HEAD
   <img src="./logo/logo-dark.svg" width="150" alt="Compressly Logo">
+=======
+  <img src="./logo/readme-logo.svg" alt="Compressly Logo" width="240">
+>>>>>>> 60210d1 (docs: improve README and add GitHub README logo)
 </p>
 
 <h1 align="center">Compressly</h1>
 
 <p align="center">
+<<<<<<< HEAD
 A modern, privacy-first video compression platform powered by FastAPI, React, JavaScript, and FFmpeg.
 </p>
 
@@ -42,6 +47,9 @@ Compress videos locally with real-time progress, advanced FFmpeg controls, analy
 
 <img src="https://img.shields.io/github/license/Vikki-2006/Compressly?style=flat-square">
 
+=======
+Modern, privacy-first video compression powered by FastAPI, React, JavaScript and FFmpeg.
+>>>>>>> 60210d1 (docs: improve README and add GitHub README logo)
 </p>
 
 ---

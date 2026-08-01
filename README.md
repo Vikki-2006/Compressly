@@ -1,17 +1,11 @@
 <p align="center">
-<<<<<<< HEAD
-  <img src="./logo/logo-dark.svg" width="150" alt="Compressly Logo">
-=======
+
+  
   <img src="./logo/readme-logo.svg" alt="Compressly Logo" width="240">
->>>>>>> 60210d1 (docs: improve README and add GitHub README logo)
 </p>
 
 <h1 align="center">Compressly</h1>
 
-<p align="center">
-<<<<<<< HEAD
-A modern, privacy-first video compression platform powered by FastAPI, React, JavaScript, and FFmpeg.
-</p>
 
 <p align="center">
 Compress videos locally with real-time progress, advanced FFmpeg controls, analytics, and zero cloud uploads.

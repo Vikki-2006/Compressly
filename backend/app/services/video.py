@@ -4,46 +4,71 @@ import json
 import time
 import shutil
 import psutil
+import traceback
 from typing import Dict, Any, Callable, Optional
+from app.utils.logger import logger
 
 # Active tasks tracking state in memory:
 # task_id -> { "status": "...", "progress": 0, "elapsed": 0, "eta": 0, "speed": "...", "process": Popen }
 active_tasks: Dict[str, Dict[str, Any]] = {}
 
-def get_ffmpeg_path() -> str:
-    """Returns path to ffmpeg binary, checking system PATH first."""
-    path = shutil.which("ffmpeg")
+def find_executable(name: str) -> str:
+    """Dynamically finds a binary checking system PATH, WinGet local folders, and common directories."""
+    target = f"{name}.exe" if os.name == "nt" else name
+
+    # 1. Check system PATH first
+    path = shutil.which(name)
     if path:
         return path
-    # Check common locations on Windows or fallback
+        
+    # 2. Check WinGet Links directory
+    user_home = os.path.expanduser("~")
+    local_appdata = os.environ.get("LOCALAPPDATA", os.path.join(user_home, "AppData", "Local"))
+    winget_links = os.path.join(local_appdata, "Microsoft", "WinGet", "Links")
+    link_path = os.path.join(winget_links, target)
+    if os.path.exists(link_path):
+        return link_path
+
+    # 3. Check WinGet Packages directory recursively
+    winget_packages = os.path.join(local_appdata, "Microsoft", "WinGet", "Packages")
+    if os.path.exists(winget_packages):
+        for root, dirs, files in os.walk(winget_packages):
+            if target in files:
+                return os.path.join(root, target)
+                
+    # 4. Check common Windows paths
     common_paths = [
-        r"C:\Program Files\ffmpeg\bin\ffmpeg.exe",
-        r"C:\ffmpeg\bin\ffmpeg.exe",
+        rf"C:\Program Files\ffmpeg\bin\{target}",
+        rf"C:\ffmpeg\bin\{target}",
+        rf"C:\Program Files (x86)\ffmpeg\bin\{target}",
+        os.path.join(local_appdata, "Programs", "ffmpeg", "bin", target),
     ]
     for cp in common_paths:
         if os.path.exists(cp):
             return cp
-    return "ffmpeg"
+            
+    # 5. Fallback
+    return name
+
+def get_ffmpeg_path() -> str:
+    """Returns path to ffmpeg binary, checking system PATH first."""
+    return find_executable("ffmpeg")
 
 def get_ffprobe_path() -> str:
     """Returns path to ffprobe binary, checking system PATH first."""
-    path = shutil.which("ffprobe")
-    if path:
-        return path
-    common_paths = [
-        r"C:\Program Files\ffmpeg\bin\ffprobe.exe",
-        r"C:\ffmpeg\bin\ffprobe.exe",
-    ]
-    for cp in common_paths:
-        if os.path.exists(cp):
-            return cp
-    return "ffprobe"
+    return find_executable("ffprobe")
 
 def get_video_metadata(file_path: str) -> Dict[str, Any]:
     """
     Extracts detailed metadata from a video file using ffprobe.
     """
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Input file not found: {file_path}")
+
     ffprobe_bin = get_ffprobe_path()
+    if not (os.path.isabs(ffprobe_bin) and os.path.exists(ffprobe_bin)) and not shutil.which(ffprobe_bin):
+        raise FileNotFoundError(f"ffprobe executable not found at '{ffprobe_bin}'. Ensure FFmpeg is installed.")
+
     cmd = [
         ffprobe_bin,
         "-v", "error",
@@ -54,10 +79,24 @@ def get_video_metadata(file_path: str) -> Dict[str, Any]:
     ]
     
     try:
-        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    except FileNotFoundError as e:
+        raise FileNotFoundError(f"ffprobe binary could not be executed at '{ffprobe_bin}': {str(e)}")
+    except Exception as e:
+        raise ValueError(f"Failed to execute ffprobe process: {str(e)}")
+
+    if result.returncode != 0:
+        stderr_msg = result.stderr.strip() if result.stderr else f"ffprobe exited with code {result.returncode}"
+        raise ValueError(f"ffprobe error (code {result.returncode}): {stderr_msg}")
+
+    if not result.stdout or not result.stdout.strip():
+        stderr_msg = result.stderr.strip() if result.stderr else "Empty output"
+        raise ValueError(f"ffprobe produced empty output: {stderr_msg}")
+
+    try:
         data = json.loads(result.stdout)
-    except (subprocess.CalledProcessError, json.JSONDecodeError, FileNotFoundError) as e:
-        raise ValueError(f"Failed to read video metadata: {str(e)}")
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Failed to parse ffprobe JSON output: {str(e)}")
 
     format_info = data.get("format", {})
     streams = data.get("streams", [])
@@ -215,6 +254,18 @@ def compress_video_async(
             universal_newlines=True
         )
         
+        stderr_lines = []
+        def drain_stderr():
+            try:
+                for line in process.stderr:
+                    stderr_lines.append(line)
+            except Exception:
+                pass
+
+        import threading
+        stderr_thread = threading.Thread(target=drain_stderr, daemon=True)
+        stderr_thread.start()
+
         # Track in task state
         if task_id in active_tasks:
             active_tasks[task_id]["process"] = process
@@ -225,10 +276,6 @@ def compress_video_async(
         
         # Read ffmpeg progress lines
         while True:
-            # Check if process ended
-            if process.poll() is not None:
-                break
-                
             # If tasks is paused, we sleep a bit and skip reading
             if task_id in active_tasks and active_tasks[task_id]["status"] == "paused":
                 time.sleep(0.5)
@@ -236,8 +283,9 @@ def compress_video_async(
                 
             line = process.stdout.readline()
             if not line:
-                # Idle check
-                time.sleep(0.1)
+                if process.poll() is not None:
+                    break
+                time.sleep(0.05)
                 continue
                 
             parts = line.strip().split("=")
@@ -276,6 +324,8 @@ def compress_video_async(
                 
         # Final poll
         returncode = process.wait()
+        stderr_thread.join(timeout=1.0)
+        stderr_out = "".join(stderr_lines)
         
         if returncode == 0 and os.path.exists(output_path):
             compressed_size = os.path.getsize(output_path)
@@ -294,8 +344,19 @@ def compress_video_async(
             if task_id in active_tasks and active_tasks[task_id]["status"] in ["cancelled", "failed"]:
                 return
                 
-            stderr_out = process.stderr.read()
             err_msg = f"FFmpeg exited with error code {returncode}. Details: {stderr_out[-500:]}"
+            logger.error(
+                "Video compression failed",
+                extra={
+                    "task_id": task_id,
+                    "input_path": input_path,
+                    "output_path": output_path,
+                    "ffmpeg_command": cmd,
+                    "returncode": returncode,
+                    "stderr": stderr_out,
+                    "error_msg": err_msg
+                }
+            )
             if task_id in active_tasks:
                 active_tasks[task_id].update({
                     "status": "failed",
@@ -305,6 +366,17 @@ def compress_video_async(
             
     except Exception as e:
         err_msg = f"Failed to run compression subprocess: {str(e)}"
+        logger.error(
+            "Video compression encountered an exception",
+            extra={
+                "task_id": task_id,
+                "input_path": input_path,
+                "output_path": output_path,
+                "ffmpeg_command": cmd if 'cmd' in locals() else None,
+                "exception_type": type(e).__name__,
+                "python_traceback": traceback.format_exc()
+            }
+        )
         if task_id in active_tasks:
             active_tasks[task_id].update({
                 "status": "failed",

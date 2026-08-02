@@ -6,10 +6,31 @@ export const Settings = () => {
     return localStorage.getItem("compressly_backend_url") || "http://localhost:8000";
   });
   const [defaultPreset, setDefaultPreset] = useState(() => {
-    return localStorage.getItem("compressly_default_preset") || "balanced";
+    return localStorage.getItem("compressly_default_preset") || "telegram";
+  });
+  const [defaultCodec, setDefaultCodec] = useState(() => {
+    return localStorage.getItem("compressly_default_codec") || "h264";
+  });
+  const [defaultCrf, setDefaultCrf] = useState(() => {
+    return parseInt(localStorage.getItem("compressly_default_crf") || "24", 10);
+  });
+  const [gpuMode, setGpuMode] = useState(() => {
+    return localStorage.getItem("compressly_gpu_mode") || "auto";
+  });
+  const [outputFolder, setOutputFolder] = useState(() => {
+    return localStorage.getItem("compressly_output_folder") || "";
+  });
+  const [maxConcurrency, setMaxConcurrency] = useState(() => {
+    return localStorage.getItem("compressly_max_concurrency") || "2";
   });
   const [autoDownload, setAutoDownload] = useState(() => {
     return localStorage.getItem("compressly_auto_download") === "true";
+  });
+  const [autoOpenFolder, setAutoOpenFolder] = useState(() => {
+    return localStorage.getItem("compressly_auto_open_folder") === "true";
+  });
+  const [autoDeleteUploads, setAutoDeleteUploads] = useState(() => {
+    return localStorage.getItem("compressly_auto_delete_uploads") === "true";
   });
 
   const [systemHealth, setSystemHealth] = useState(null);
@@ -41,17 +62,31 @@ export const Settings = () => {
   const handleSave = () => {
     localStorage.setItem("compressly_backend_url", backendUrl);
     localStorage.setItem("compressly_default_preset", defaultPreset);
+    localStorage.setItem("compressly_default_codec", defaultCodec);
+    localStorage.setItem("compressly_default_crf", String(defaultCrf));
+    localStorage.setItem("compressly_gpu_mode", gpuMode);
+    localStorage.setItem("compressly_output_folder", outputFolder);
+    localStorage.setItem("compressly_max_concurrency", maxConcurrency);
     localStorage.setItem("compressly_auto_download", String(autoDownload));
+    localStorage.setItem("compressly_auto_open_folder", String(autoOpenFolder));
+    localStorage.setItem("compressly_auto_delete_uploads", String(autoDeleteUploads));
+
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 2000);
-    // Reload health
     fetchHealth(true);
   };
 
   const handleReset = () => {
     setBackendUrl("http://localhost:8000");
-    setDefaultPreset("balanced");
+    setDefaultPreset("telegram");
+    setDefaultCodec("h264");
+    setDefaultCrf(24);
+    setGpuMode("auto");
+    setOutputFolder("");
+    setMaxConcurrency("2");
     setAutoDownload(false);
+    setAutoOpenFolder(false);
+    setAutoDeleteUploads(false);
   };
 
   const clearHistory = async () => {
@@ -59,7 +94,6 @@ export const Settings = () => {
       return;
     }
     try {
-      // First fetch history items
       const listRes = await fetch(`${backendUrl}/api/history`);
       if (listRes.ok) {
         const items = await listRes.json();
@@ -82,7 +116,7 @@ export const Settings = () => {
         </div>
         <div>
           <h1 className="text-2xl font-bold text-foreground">Settings</h1>
-          <p className="text-sm text-muted-foreground">Configure application preferences and monitor server status.</p>
+          <p className="text-sm text-muted-foreground">Configure global defaults, encoder hardware acceleration, and system health.</p>
         </div>
       </div>
 
@@ -91,7 +125,7 @@ export const Settings = () => {
         <div className="md:col-span-2 space-y-6">
           <div className="rounded-2xl border border-border/40 p-6 glass space-y-5">
             <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-              Preferences
+              Preferences & Encoder Defaults
             </h2>
 
             {/* Backend URL */}
@@ -107,32 +141,150 @@ export const Settings = () => {
               <p className="text-xs text-muted-foreground">The API endpoint for video uploading and FFmpeg encoding.</p>
             </div>
 
-            {/* Quality Preset */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-foreground">Default Quality Preset</label>
-              <select
-                value={defaultPreset}
-                onChange={(e) => setDefaultPreset(e.target.value)}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-foreground transition-all"
-              >
-                <option value="high">High Quality (CRF 20)</option>
-                <option value="balanced">Balanced (CRF 24)</option>
-                <option value="max">Maximum Compression (CRF 30)</option>
-              </select>
+            <div className="grid grid-cols-2 gap-4">
+              {/* Default Preset */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">Default Smart Preset</label>
+                <select
+                  value={defaultPreset}
+                  onChange={(e) => setDefaultPreset(e.target.value)}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-foreground transition-all capitalize"
+                >
+                  <option value="whatsapp">WhatsApp (&lt; 16MB)</option>
+                  <option value="instagram_feed">Instagram Feed (1:1)</option>
+                  <option value="instagram_reel">Instagram Reel (9:16)</option>
+                  <option value="tiktok">TikTok Video</option>
+                  <option value="youtube">YouTube HD (1080p)</option>
+                  <option value="youtube_shorts">YouTube Shorts</option>
+                  <option value="facebook">Facebook Video</option>
+                  <option value="telegram">Telegram (720p)</option>
+                  <option value="discord">Discord (&lt; 25MB)</option>
+                  <option value="email">Email Attachment (&lt; 25MB)</option>
+                  <option value="archive">Archive (Visually Lossless)</option>
+                  <option value="max_compression">Max Compression (Tiny)</option>
+                  <option value="lossless">Lossless Preservation</option>
+                  <option value="balanced">Balanced Default</option>
+                  <option value="high_quality">High Quality</option>
+                  <option value="audio_mp3">Audio Extraction (MP3)</option>
+                </select>
+              </div>
+
+              {/* Default Video Codec */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">Default Video Codec</label>
+                <select
+                  value={defaultCodec}
+                  onChange={(e) => setDefaultCodec(e.target.value)}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-foreground transition-all uppercase"
+                >
+                  <option value="h264">H.264 (AVC) - Universal Compatibility</option>
+                  <option value="hevc">H.265 (HEVC) - High Efficiency</option>
+                  <option value="av1">AV1 (libsvtav1) - Next Gen</option>
+                  <option value="vp9">VP9 (WebM)</option>
+                </select>
+              </div>
             </div>
 
-            {/* Auto download */}
-            <div className="flex items-center space-x-3 pt-2">
+            <div className="grid grid-cols-2 gap-4">
+              {/* Default GPU Acceleration */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">GPU Acceleration Mode</label>
+                <select
+                  value={gpuMode}
+                  onChange={(e) => setGpuMode(e.target.value)}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-foreground transition-all"
+                >
+                  <option value="auto">Auto Detect Best Hardware</option>
+                  <option value="cpu">Software Encoding (CPU Only)</option>
+                  <option value="nvenc">NVIDIA NVENC</option>
+                  <option value="qsv">Intel QuickSync (QSV)</option>
+                  <option value="amf">AMD AMF</option>
+                </select>
+              </div>
+
+              {/* Max Concurrency */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">Max Simultaneous Tasks</label>
+                <select
+                  value={maxConcurrency}
+                  onChange={(e) => setMaxConcurrency(e.target.value)}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-foreground transition-all"
+                >
+                  <option value="1">1 Active Task (Lowest CPU)</option>
+                  <option value="2">2 Active Tasks (Recommended)</option>
+                  <option value="4">4 Active Tasks (High Performance)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Default CRF Slider */}
+            <div className="space-y-1.5 pt-2">
+              <div className="flex justify-between text-sm">
+                <label className="font-medium text-foreground">Default CRF (Constant Rate Factor)</label>
+                <span className="font-bold text-foreground">{defaultCrf}</span>
+              </div>
               <input
-                type="checkbox"
-                id="auto-download"
-                checked={autoDownload}
-                onChange={(e) => setAutoDownload(e.target.checked)}
-                className="h-4.5 w-4.5 rounded border-border bg-background text-foreground focus:ring-0"
+                type="range"
+                min="14"
+                max="35"
+                value={defaultCrf}
+                onChange={(e) => setDefaultCrf(parseInt(e.target.value, 10))}
+                className="w-full h-1.5 bg-foreground/10 rounded-lg appearance-none cursor-pointer accent-foreground"
               />
-              <label htmlFor="auto-download" className="text-sm font-medium text-foreground cursor-pointer">
-                Automatically download video when completed
-              </label>
+            </div>
+
+            {/* Custom Output Directory */}
+            <div className="space-y-1.5 pt-2">
+              <label className="text-sm font-medium text-foreground">Custom Output Folder Path</label>
+              <input
+                type="text"
+                value={outputFolder}
+                onChange={(e) => setOutputFolder(e.target.value)}
+                placeholder="Default: system downloads directory"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-foreground transition-all"
+              />
+            </div>
+
+            {/* Automation Toggles */}
+            <div className="space-y-3 pt-3 border-t border-border/10">
+              <div className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  id="auto-download"
+                  checked={autoDownload}
+                  onChange={(e) => setAutoDownload(e.target.checked)}
+                  className="h-4.5 w-4.5 rounded border-border bg-background text-foreground focus:ring-0"
+                />
+                <label htmlFor="auto-download" className="text-sm font-medium text-foreground cursor-pointer">
+                  Automatically download video when compression completes
+                </label>
+              </div>
+
+              <div className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  id="auto-open-folder"
+                  checked={autoOpenFolder}
+                  onChange={(e) => setAutoOpenFolder(e.target.checked)}
+                  className="h-4.5 w-4.5 rounded border-border bg-background text-foreground focus:ring-0"
+                />
+                <label htmlFor="auto-open-folder" className="text-sm font-medium text-foreground cursor-pointer">
+                  Automatically open output folder in File Explorer when finished
+                </label>
+              </div>
+
+              <div className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  id="auto-delete-uploads"
+                  checked={autoDeleteUploads}
+                  onChange={(e) => setAutoDeleteUploads(e.target.checked)}
+                  className="h-4.5 w-4.5 rounded border-border bg-background text-foreground focus:ring-0"
+                />
+                <label htmlFor="auto-delete-uploads" className="text-sm font-medium text-foreground cursor-pointer">
+                  Automatically clean temporary upload cache on exit
+                </label>
+              </div>
             </div>
 
             {/* Controls */}
@@ -142,7 +294,7 @@ export const Settings = () => {
                 className="flex items-center gap-1.5 rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background dark:bg-foreground dark:text-background hover:opacity-90 active:scale-98 transition-all"
               >
                 <Save className="h-4 w-4" />
-                Save Changes
+                Save Preferences
               </button>
               <button
                 onClick={handleReset}
@@ -154,7 +306,7 @@ export const Settings = () => {
               {saveSuccess && (
                 <span className="text-xs font-semibold text-green-500 flex items-center gap-1">
                   <CheckCircle className="h-4 w-4" />
-                  Saved!
+                  Saved Successfully!
                 </span>
               )}
             </div>

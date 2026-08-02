@@ -3,8 +3,10 @@ import subprocess
 import time
 import shutil
 import psutil
+import traceback
 from typing import Dict, Any, Callable, Optional
 from app.services.video import get_ffmpeg_path, get_ffprobe_path, active_tasks
+from app.utils.logger import logger
 
 class FFmpegService:
     @staticmethod
@@ -28,12 +30,41 @@ class FFmpegService:
         if watermark_img_path and os.path.exists(watermark_img_path):
             cmd.extend(["-i", watermark_img_path])
             
-        # Target preset
-        preset = options.get("preset", "medium")
-        cmd.extend(["-preset", preset])
+        # Video codecs & GPU Acceleration mapping
+        raw_codec = (options.get("video_codec") or options.get("codec") or "h264").lower()
+        gpu_mode = (options.get("gpu_acceleration") or "auto").lower()
         
-        # Video codecs
-        cmd.extend(["-c:v", "libx264"])
+        target_vcodec = "libx264"
+        if raw_codec in ["hevc", "h265"]:
+            if gpu_mode == "nvenc":
+                target_vcodec = "hevc_nvenc"
+            elif gpu_mode == "qsv":
+                target_vcodec = "hevc_qsv"
+            elif gpu_mode == "amf":
+                target_vcodec = "hevc_amf"
+            else:
+                target_vcodec = "libx265"
+        elif raw_codec in ["av1", "libsvtav1"]:
+            target_vcodec = "libsvtav1"
+        elif raw_codec in ["vp9", "libvpx-vp9"]:
+            target_vcodec = "libvpx-vp9"
+        else: # h264
+            if gpu_mode == "nvenc":
+                target_vcodec = "h264_nvenc"
+            elif gpu_mode == "qsv":
+                target_vcodec = "h264_qsv"
+            elif gpu_mode == "amf":
+                target_vcodec = "h264_amf"
+            else:
+                target_vcodec = "libx264"
+                
+        cmd.extend(["-c:v", target_vcodec])
+
+        # Target x264/x265 preset speed
+        preset = options.get("preset", "medium")
+        valid_presets = {"ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow"}
+        speed_preset = preset if preset in valid_presets else "medium"
+        cmd.extend(["-preset", speed_preset])
         
         # CRF vs Video Bitrate
         video_bitrate = options.get("video_bitrate")
@@ -66,7 +97,6 @@ class FFmpegService:
             vf_filters.append(scale_filter)
             
         if watermark_img_path and os.path.exists(watermark_img_path):
-            # Graphic watermark overlay rules using filter complex
             if scale_filter:
                 cmd.extend(["-filter_complex", f"[0:v]{scale_filter}[sc];[sc][1:v]overlay=W-w-10:H-h-10"])
             else:
@@ -77,13 +107,24 @@ class FFmpegService:
             if vf_filters:
                 cmd.extend(["-vf", ",".join(vf_filters)])
                 
-        # Audio channels
-        cmd.extend(["-c:a", "aac"])
-        audio_bitrate = options.get("audio_bitrate")
-        if audio_bitrate:
-            cmd.extend(["-b:a", str(audio_bitrate)])
+        # Audio codec & bitrate
+        audio_codec = (options.get("audio_codec") or "aac").lower()
+        if audio_codec == "mp3":
+            acodec = "libmp3lame"
+        elif audio_codec == "opus":
+            acodec = "libopus"
+        elif audio_codec == "copy":
+            acodec = "copy"
         else:
-            cmd.extend(["-b:a", "128k"])
+            acodec = "aac"
+            
+        cmd.extend(["-c:a", acodec])
+        if acodec != "copy":
+            audio_bitrate = options.get("audio_bitrate")
+            if audio_bitrate:
+                cmd.extend(["-b:a", str(audio_bitrate)])
+            else:
+                cmd.extend(["-b:a", "128k"])
             
         cmd.extend(["-progress", "-"])
         cmd.append(output_path)
@@ -143,24 +184,32 @@ class FFmpegService:
                 universal_newlines=True
             )
             
+            stderr_lines = []
+            def drain_stderr():
+                try:
+                    for line in process.stderr:
+                        stderr_lines.append(line)
+                except Exception:
+                    pass
+
+            import threading
+            stderr_thread = threading.Thread(target=drain_stderr, daemon=True)
+            stderr_thread.start()
+            
             if task_id in active_tasks:
                 active_tasks[task_id]["process"] = process
                 active_tasks[task_id]["status"] = "processing"
                 
             out_time_us = 0
             speed = "1.0x"
+            fps_val = 0.0
             
             while True:
-                if process.poll() is not None:
-                    break
-                    
-                if task_id in active_tasks and active_tasks[task_id]["status"] == "paused":
-                    time.sleep(0.5)
-                    continue
-                    
                 line = process.stdout.readline()
                 if not line:
-                    time.sleep(0.1)
+                    if process.poll() is not None:
+                        break
+                    time.sleep(0.05)
                     continue
                     
                 parts = line.strip().split("=")
@@ -173,6 +222,11 @@ class FFmpegService:
                             pass
                     elif key == "speed":
                         speed = val.strip()
+                    elif key == "fps":
+                        try:
+                            fps_val = float(val.strip())
+                        except ValueError:
+                            pass
                         
                 elapsed = time.time() - start_time
                 if duration > 0:
@@ -188,11 +242,19 @@ class FFmpegService:
                         "progress": round(progress, 1),
                         "elapsed": round(elapsed, 1),
                         "eta": round(eta, 1),
-                        "speed": speed
+                        "speed": speed,
+                        "fps": round(fps_val, 1)
                     })
                     
             returncode = process.wait()
+            stderr_thread.join(timeout=1.0)
+            stderr_out = "".join(stderr_lines)
             output_path = cmd[-1]
+            cmd_str = " ".join(cmd)
+            
+            if task_id in active_tasks:
+                active_tasks[task_id]["ffmpeg_log"] = f"CMD: {cmd_str}\n\nSTDERR:\n{stderr_out}"
+                active_tasks[task_id]["cmd_str"] = cmd_str
             
             if returncode == 0 and os.path.exists(output_path):
                 compressed_size = os.path.getsize(output_path)
@@ -209,17 +271,49 @@ class FFmpegService:
             else:
                 if task_id in active_tasks and active_tasks[task_id]["status"] in ["cancelled", "failed"]:
                     return
-                stderr_out = process.stderr.read()
-                err_msg = f"FFmpeg error: {stderr_out[-500:]}"
+                
+                # Friendly error diagnostic analysis
+                diag_msg = "FFmpeg encoding failed."
+                low_stderr = stderr_out.lower()
+                if "unknown encoder" in low_stderr or "unsupported codec" in low_stderr or "error setting preset" in low_stderr:
+                    diag_msg = "Unsupported codec or preset configuration. Please check Advanced Options."
+                elif "no space left on device" in low_stderr or "disk full" in low_stderr:
+                    diag_msg = "Disk full. Please free up storage space in your output directory."
+                elif "permission denied" in low_stderr:
+                    diag_msg = "Permission denied while writing output video file."
+                elif "invalid argument" in low_stderr or "error while opening encoder" in low_stderr:
+                    diag_msg = "Invalid FFmpeg parameter combination for selected codec/container."
+                else:
+                    diag_msg = f"FFmpeg error: {stderr_out[-400:]}"
+
+                logger.error(
+                    "FFmpeg task execution failed",
+                    extra={
+                        "task_id": task_id,
+                        "ffmpeg_command": cmd,
+                        "returncode": returncode,
+                        "stderr": stderr_out,
+                        "error_msg": diag_msg
+                    }
+                )
                 if task_id in active_tasks:
                     active_tasks[task_id].update({
                         "status": "failed",
-                        "error": err_msg
+                        "error": diag_msg
                     })
-                on_failure(err_msg)
+                on_failure(diag_msg)
                 
         except Exception as e:
             err_msg = f"FFmpeg execution failed: {str(e)}"
+            logger.error(
+                "FFmpeg task encountered exception",
+                extra={
+                    "task_id": task_id,
+                    "ffmpeg_command": cmd,
+                    "exception_type": type(e).__name__,
+                    "python_traceback": traceback.format_exc()
+                }
+            )
             if task_id in active_tasks:
                 active_tasks[task_id].update({
                     "status": "failed",

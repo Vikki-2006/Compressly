@@ -37,12 +37,6 @@ export const Footer = ({ setRoute }) => {
             </button>
           </div>
         </div>
-
-        <div className="mt-6 border-t border-border/10 pt-4 flex justify-center text-xs text-muted-foreground/60">
-          <span className="flex items-center gap-1">
-            Made with <Heart className="h-3 w-3 text-red-500 fill-current animate-pulse" /> on React, FastAPI, & FFmpeg.
-          </span>
-        </div>
       </div>
     </footer>
   );

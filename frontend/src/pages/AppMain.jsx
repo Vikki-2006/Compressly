@@ -16,13 +16,26 @@ import {
   HelpCircle,
   Clock,
   RefreshCw,
-  Sliders
+  Sliders,
+  Zap,
+  CheckCircle2,
+  Gauge,
+  Film,
+  Sparkles,
+  Folder,
+  FileText
 } from "lucide-react";
 import { SizeComparisonChart } from "../components/Charts.jsx";
+import { SmartPresetsGrid, SMART_PRESETS } from "../components/SmartPresetsGrid.jsx";
+import { AdvancedOptionsPanel } from "../components/AdvancedOptionsPanel.jsx";
+import { BatchControls } from "../components/BatchControls.jsx";
+import { BeforeAfterPanel } from "../components/BeforeAfterPanel.jsx";
+import { VideoPreviewModal } from "../components/VideoPreviewModal.jsx";
+import { FFmpegLogModal } from "../components/FFmpegLogModal.jsx";
 
 export const AppMain = () => {
   const backendUrl = localStorage.getItem("compressly_backend_url") || "http://localhost:8000";
-  const defaultPreset = localStorage.getItem("compressly_default_preset") || "balanced";
+  const defaultPreset = localStorage.getItem("compressly_default_preset") || "telegram";
 
   const [queue, setQueue] = useState([]);
   const [selectedItemId, setSelectedItemId] = useState(null);
@@ -30,17 +43,32 @@ export const AppMain = () => {
   const [copiedInfo, setCopiedInfo] = useState(false);
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [historySearch, setHistorySearch] = useState("");
+  const [historyStatusFilter, setHistoryStatusFilter] = useState("all");
   const [dragActive, setDragActive] = useState(false);
   const [toastMsg, setToastMsg] = useState(null);
+  const [previewItem, setPreviewItem] = useState(null);
+  const [viewingLogTaskId, setViewingLogTaskId] = useState(null);
 
   // References to handle HTTP uploads and polling
   const activeUploads = useRef({});
   const pollingIntervals = useRef({});
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     loadHistory();
-    // Cleanup polling on unmount
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "o") {
+        e.preventDefault();
+        fileInputRef.current?.click();
+      } else if (e.key === "Escape") {
+        setPreviewItem(null);
+        setViewingLogTaskId(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
     return () => {
+      window.removeEventListener("keydown", handleKeyDown);
       Object.values(pollingIntervals.current).forEach((id) => clearInterval(id));
     };
   }, []);
@@ -103,6 +131,7 @@ export const AppMain = () => {
         return;
       }
 
+      const matchingPreset = SMART_PRESETS.find((p) => p.id === defaultPreset) || SMART_PRESETS[4]; // Default: Telegram
       const id = Math.random().toString(36).substring(2, 9);
       const newItem = {
         id,
@@ -115,9 +144,15 @@ export const AppMain = () => {
         elapsed: 0,
         eta: 0,
         speed: "0.0x",
+        fps: 0,
         options: {
-          preset: defaultPreset,
-          crf: defaultPreset === "high" ? 20 : defaultPreset === "max" ? 30 : 24,
+          preset: matchingPreset.id,
+          crf: matchingPreset.crf,
+          width: matchingPreset.width,
+          height: matchingPreset.height,
+          fps: matchingPreset.fps,
+          audio_bitrate: matchingPreset.audio_bitrate,
+          task_type: "compression",
         },
       };
 
@@ -158,23 +193,29 @@ export const AppMain = () => {
             metadata: res.metadata,
             thumbnailUrl: res.thumbnail_url,
           });
-          triggerToast(`'${item.name}' upload complete.`);
+          triggerToast(`'${item.name}' uploaded successfully!`);
         } catch {
-          updateItem(item.id, { status: "failed", error: "Failed to parse upload metadata response." });
+          updateItem(item.id, { status: "failed", error: "Failed to parse metadata response." });
+          triggerToast(`Failed to parse metadata for '${item.name}'`, "error");
         }
       } else {
         let errDetail = "Server rejected upload";
         try {
           const parsed = JSON.parse(xhr.responseText);
           errDetail = parsed.detail || errDetail;
+          if (typeof errDetail === "object" && errDetail !== null) {
+            errDetail = errDetail.detail || errDetail.error || errDetail.details || JSON.stringify(errDetail);
+          }
         } catch {}
         updateItem(item.id, { status: "failed", error: errDetail });
+        triggerToast(`Upload failed: ${errDetail}`, "error");
       }
       delete activeUploads.current[item.id];
     };
 
     xhr.onerror = () => {
       updateItem(item.id, { status: "failed", error: "Network connection lost during upload." });
+      triggerToast("Network connection lost during upload.", "error");
       delete activeUploads.current[item.id];
     };
 
@@ -186,11 +227,6 @@ export const AppMain = () => {
     setQueue((prev) =>
       prev.map((item) => {
         if (item.id === id) {
-          // If option preset changes, dynamically update default CRF values:
-          if (updates.options && updates.options.preset !== item.options.preset) {
-            const p = updates.options.preset;
-            updates.options.crf = p === "high" ? 20 : p === "max" ? 30 : 24;
-          }
           return { ...item, ...updates };
         }
         return item;
@@ -198,11 +234,37 @@ export const AppMain = () => {
     );
   };
 
-  const startCompress = async (itemId) => {
+  // Select Preset Card handler
+  const selectPreset = (itemId, presetObj) => {
     const item = queue.find((q) => q.id === itemId);
-    if (!item || item.status !== "ready" || !item.fileId) return;
+    if (!item) return;
 
-    updateItem(itemId, { status: "processing", progress: 0, elapsed: 0, eta: 0 });
+    updateItem(itemId, {
+      options: {
+        ...item.options,
+        preset: presetObj.id,
+        crf: presetObj.crf,
+        video_codec: presetObj.video_codec || "h264",
+        width: presetObj.width,
+        height: presetObj.height,
+        fps: presetObj.fps,
+        audio_bitrate: presetObj.audio_bitrate,
+        audio_codec: presetObj.audio_codec || "aac",
+        container: presetObj.container || "mp4",
+        task_type: presetObj.task_type || "compression"
+      },
+    });
+  };
+
+  // Start video compression processing
+  const handleStartProcess = async (itemId, optionsOverride = null) => {
+    const item = queue.find((i) => i.id === itemId);
+    if (!item || !item.fileId || item.status === "processing") return;
+
+    updateItem(itemId, { status: "processing", progress: 0, elapsed: 0, eta: 0, speed: "0.0x", fps: 0 });
+    triggerToast(`Started compressing '${item.name}'...`);
+
+    const finalOptions = optionsOverride || item.options;
 
     try {
       const res = await fetch(`${backendUrl}/api/compress`, {
@@ -210,13 +272,18 @@ export const AppMain = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           file_id: item.fileId,
-          preset: item.options.preset,
-          crf: item.options.crf,
-          video_bitrate: item.options.videoBitrate || null,
-          audio_bitrate: item.options.audioBitrate || null,
-          width: item.options.width || null,
-          height: item.options.height || null,
-          fps: item.options.fps || null,
+          preset: finalOptions.preset || "telegram",
+          crf: finalOptions.crf,
+          video_bitrate: finalOptions.video_bitrate,
+          audio_bitrate: finalOptions.audio_bitrate,
+          width: finalOptions.width,
+          height: finalOptions.height,
+          fps: finalOptions.fps,
+          task_type: finalOptions.task_type || "compression",
+          audio_codec: finalOptions.audio_codec || "aac",
+          video_codec: finalOptions.video_codec || "h264",
+          gpu_acceleration: finalOptions.gpu_acceleration || "auto",
+          container: finalOptions.container || "mp4",
         }),
       });
 
@@ -226,10 +293,16 @@ export const AppMain = () => {
         startPolling(itemId, data.task_id);
       } else {
         const err = await res.json();
-        updateItem(itemId, { status: "failed", error: err.detail || "Compression startup failed." });
+        let errDetail = err.detail || "Compression startup failed.";
+        if (typeof errDetail === "object" && errDetail !== null) {
+          errDetail = errDetail.detail || errDetail.error || errDetail.details || JSON.stringify(errDetail);
+        }
+        updateItem(itemId, { status: "failed", error: errDetail });
+        triggerToast(`Compression failed: ${errDetail}`, "error");
       }
-    } catch {
-      updateItem(itemId, { status: "failed", error: "Failed to connect to API." });
+    } catch (e) {
+      updateItem(itemId, { status: "failed", error: "Failed to connect to compression API." });
+      triggerToast("Failed to connect to API server.", "error");
     }
   };
 
@@ -253,17 +326,19 @@ export const AppMain = () => {
             compressedSize: data.compressed_size,
             elapsed: data.elapsed,
           });
-          triggerToast("Compression complete!");
+          triggerToast(`Successfully compressed '${queue.find((q) => q.id === itemId)?.name}'!`);
           loadHistory();
 
-          // Auto download if active
+          // Auto download if enabled
           if (localStorage.getItem("compressly_auto_download") === "true") {
-            downloadFile(taskId, data.filename || "compressed_video.mp4");
+            const currentItem = queue.find((q) => q.id === itemId);
+            downloadFile(taskId, currentItem?.name || "compressed_video.mp4");
           }
         } else if (data.status === "failed") {
           clearInterval(interval);
           delete pollingIntervals.current[itemId];
-          updateItem(itemId, { status: "failed", error: data.error || "FFmpeg job failed." });
+          updateItem(itemId, { status: "failed", error: data.error || "FFmpeg encoding failed." });
+          triggerToast(`Encoding failed for task.`, "error");
         } else if (data.status === "cancelled") {
           clearInterval(interval);
           delete pollingIntervals.current[itemId];
@@ -275,6 +350,7 @@ export const AppMain = () => {
             elapsed: data.elapsed,
             eta: data.eta,
             speed: data.speed,
+            fps: data.fps || 0,
           });
         } else if (data.status === "processing") {
           updateItem(itemId, {
@@ -283,12 +359,13 @@ export const AppMain = () => {
             elapsed: data.elapsed,
             eta: data.eta,
             speed: data.speed,
+            fps: data.fps || 0,
           });
         }
       } catch {
-        // Carry on polling during temporary networking hiccups
+        // Networking retry loop
       }
-    }, 1000);
+    }, 800);
 
     pollingIntervals.current[itemId] = interval;
   };
@@ -297,7 +374,6 @@ export const AppMain = () => {
     const item = queue.find((q) => q.id === itemId);
     if (!item) return;
 
-    // Handle cancellation during uploading
     if (item.status === "uploading" && action === "cancel") {
       if (activeUploads.current[itemId]) {
         activeUploads.current[itemId].abort();
@@ -305,10 +381,15 @@ export const AppMain = () => {
       }
       setQueue((prev) => prev.filter((q) => q.id !== itemId));
       if (selectedItemId === itemId) setSelectedItemId(null);
+      triggerToast("Upload cancelled.");
       return;
     }
 
-    if (!item.taskId) return;
+    if (!item.taskId) {
+      setQueue((prev) => prev.filter((q) => q.id !== itemId));
+      if (selectedItemId === itemId) setSelectedItemId(null);
+      return;
+    }
 
     try {
       const res = await fetch(`${backendUrl}/api/compress/control`, {
@@ -326,15 +407,17 @@ export const AppMain = () => {
           setQueue((prev) => prev.filter((q) => q.id !== itemId));
           if (selectedItemId === itemId) setSelectedItemId(null);
           loadHistory();
-          triggerToast("Compression cancelled.");
+          triggerToast("Compression task cancelled.");
         } else if (action === "pause") {
           updateItem(itemId, { status: "paused" });
+          triggerToast("Compression paused.");
         } else if (action === "resume") {
           updateItem(itemId, { status: "processing" });
+          triggerToast("Compression resumed.");
         }
       }
     } catch {
-      triggerToast("Failed to transmit task command.", "error");
+      triggerToast("Failed to send control command.", "error");
     }
   };
 
@@ -345,6 +428,7 @@ export const AppMain = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    triggerToast(`Downloading compressed '${originalName}'...`);
   };
 
   const downloadFromHistory = (taskId, filename) => {
@@ -354,6 +438,7 @@ export const AppMain = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    triggerToast(`Downloading '${filename}' from history...`);
   };
 
   const deleteHistoryRow = async (taskId) => {
@@ -386,21 +471,99 @@ Original Size: ${(meta.size / (1024 * 1024)).toFixed(2)}MB`;
   };
 
   const formatBytes = (bytes) => {
-    if (bytes === 0) return "0 B";
+    if (!bytes || bytes <= 0) return "0 B";
     const k = 1024;
     const sizes = ["B", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
   };
 
-  // Get active item
-  const selectedItem = queue.find((item) => item.id === selectedItemId);
+  const formatDate = (isoString) => {
+    if (!isoString) return "-";
+    try {
+      const d = new Date(isoString);
+      return d.toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return isoString;
+    }
+  };
 
-  // Empirical compression estimate percentage:
-  const getSavingsEstimate = (preset) => {
-    if (preset === "high") return "~15% - 30% reduction";
-    if (preset === "max") return "~70% - 90% reduction";
-    return "~40% - 60% reduction";
+  // Selected item
+  const selectedItem = queue.find((item) => item.id === selectedItemId);
+  const activePresetObj = SMART_PRESETS.find((p) => p.id === selectedItem?.options?.preset) || SMART_PRESETS[4];
+
+  // Calculate Output Estimation
+  const calculateEstimate = (item, presetObj) => {
+    if (!item || !item.size) return { estSize: 0, estReduction: 0, quality: "Balanced", speedEst: "Fast" };
+    const origSize = item.size;
+    const estReduction = presetObj?.estReduction || 45;
+    const estSize = Math.max(512 * 1024, Math.round(origSize * (1 - estReduction / 100)));
+    return {
+      estSize,
+      estReduction,
+      quality: presetObj?.quality || "Balanced Quality",
+      speedEst: presetObj?.speedEst || "Fast"
+    };
+  };
+
+  const handleCompressAll = () => {
+    const readyItems = queue.filter((i) => i.status === "ready");
+    readyItems.forEach((item) => handleStartProcess(item.id));
+    if (readyItems.length > 0) {
+      triggerToast(`Batch compressing ${readyItems.length} videos...`);
+    }
+  };
+
+  const handlePauseAll = () => {
+    const processingItems = queue.filter((i) => i.status === "processing");
+    processingItems.forEach((item) => controlTask(item.id, "pause"));
+    if (processingItems.length > 0) {
+      triggerToast(`Paused ${processingItems.length} active compressions.`);
+    }
+  };
+
+  const handleResumeAll = () => {
+    const pausedItems = queue.filter((i) => i.status === "paused");
+    pausedItems.forEach((item) => controlTask(item.id, "resume"));
+    if (pausedItems.length > 0) {
+      triggerToast(`Resumed ${pausedItems.length} compressions.`);
+    }
+  };
+
+  const handleCancelAll = () => {
+    queue.forEach((item) => controlTask(item.id, "cancel"));
+    setQueue([]);
+    setSelectedItemId(null);
+    triggerToast("Cleared compression queue.");
+  };
+
+  const handleMoveItemUp = (id) => {
+    const idx = queue.findIndex((q) => q.id === id);
+    if (idx <= 0) return;
+    const newQ = [...queue];
+    const temp = newQ[idx - 1];
+    newQ[idx - 1] = newQ[idx];
+    newQ[idx] = temp;
+    setQueue(newQ);
+  };
+
+  const handleOpenFolder = async (taskId) => {
+    try {
+      const res = await fetch(`${backendUrl}/api/open-folder/${taskId}`, { method: "POST" });
+      if (res.ok) {
+        triggerToast("Opened file location in File Explorer.");
+      } else {
+        triggerToast("Output file not found on server disk.", "error");
+      }
+    } catch {
+      triggerToast("Failed to open folder.", "error");
+    }
   };
 
   return (
@@ -412,10 +575,10 @@ Original Size: ${(meta.size / (1024 * 1024)).toFixed(2)}MB`;
             initial={{ opacity: 0, y: -20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            className={`fixed top-4 right-4 z-50 flex items-center space-x-2 rounded-xl px-4 py-3 shadow-lg border backdrop-blur-md ${
+            className={`fixed top-4 right-4 z-50 flex items-center space-x-2 rounded-xl px-4 py-3 shadow-xl border backdrop-blur-md ${
               toastMsg.type === "error"
                 ? "bg-red-500/10 text-red-500 border-red-500/20"
-                : "bg-foreground/10 text-foreground border-foreground/10"
+                : "bg-foreground/10 text-foreground border-foreground/15 dark:bg-foreground/20"
             }`}
           >
             <AlertCircle className="h-4.5 w-4.5" />
@@ -436,17 +599,18 @@ Original Size: ${(meta.size / (1024 * 1024)).toFixed(2)}MB`;
             onDrop={handleDrop}
             className={`relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-10 text-center transition-all ${
               dragActive
-                ? "border-foreground bg-foreground/[0.02]"
+                ? "border-foreground bg-foreground/[0.03] scale-[1.005]"
                 : "border-border/65 hover:border-foreground/50 hover:bg-foreground/[0.005]"
             }`}
           >
             <input
+              ref={fileInputRef}
               type="file"
               multiple
               onChange={handleFileInput}
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
             />
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-foreground/5 dark:bg-foreground/10 text-foreground mb-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-foreground/5 dark:bg-foreground/10 text-foreground mb-4 shadow-sm">
               <Upload className="h-6 w-6" />
             </div>
             <h3 className="text-sm font-semibold text-foreground">Drag & drop your videos here</h3>
@@ -456,23 +620,33 @@ Original Size: ${(meta.size / (1024 * 1024)).toFixed(2)}MB`;
           </div>
 
           {/* Queue Section */}
-          {queue.length > 0 && (
+          {queue.length > 0 ? (
             <div className="space-y-3.5">
-              <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider flex items-center gap-1.5">
-                <Video className="h-4 w-4" />
-                Compression Queue ({queue.length})
-              </h2>
+              <BatchControls
+                queue={queue}
+                selectedItemId={selectedItemId}
+                onCompressSelected={(id) => handleStartProcess(id)}
+                onCompressAll={handleCompressAll}
+                onPauseAll={handlePauseAll}
+                onResumeAll={handleResumeAll}
+                onCancelAll={handleCancelAll}
+                onMoveItemUp={handleMoveItemUp}
+                onMoveItemDown={handleMoveItemDown}
+              />
 
               <div className="space-y-3">
                 {queue.map((item) => {
                   const isSelected = item.id === selectedItemId;
                   return (
-                    <div
+                    <motion.div
                       key={item.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
                       onClick={() => setSelectedItemId(item.id)}
                       className={`relative flex flex-col md:flex-row items-start md:items-center justify-between rounded-xl border p-4 transition-all cursor-pointer ${
                         isSelected
-                          ? "border-foreground bg-foreground/[0.015]"
+                          ? "border-foreground bg-foreground/[0.02] shadow-sm"
                           : "border-border/40 hover:border-border hover:bg-foreground/[0.005]"
                       }`}
                     >
@@ -519,13 +693,13 @@ Original Size: ${(meta.size / (1024 * 1024)).toFixed(2)}MB`;
                       <div className="flex items-center space-x-4 mt-3 md:mt-0 w-full md:w-auto justify-end">
                         {/* Status detail */}
                         {item.status === "uploading" && (
-                          <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                            Uploading...
+                          <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                            <RefreshCw className="h-3 w-3 animate-spin" /> Uploading...
                           </span>
                         )}
 
                         {item.status === "ready" && (
-                          <span className="text-xs font-semibold text-foreground/80 bg-foreground/5 dark:bg-foreground/10 px-2 py-0.5 rounded-full">
+                          <span className="text-xs font-semibold text-foreground/80 bg-foreground/5 dark:bg-foreground/10 px-2.5 py-0.5 rounded-full">
                             Ready
                           </span>
                         )}
@@ -545,15 +719,15 @@ Original Size: ${(meta.size / (1024 * 1024)).toFixed(2)}MB`;
                               />
                             </div>
                             <span className="text-[9px] text-muted-foreground">
-                              ETA: {item.eta.toFixed(0)}s &middot; {item.elapsed.toFixed(0)}s elapsed
+                              ETA: {item.eta.toFixed(0)}s &middot; {item.elapsed.toFixed(0)}s
                             </span>
                           </div>
                         )}
 
                         {item.status === "completed" && (
                           <div className="text-right">
-                            <span className="text-xs font-semibold text-green-500 bg-green-500/10 px-2.5 py-0.5 rounded-full">
-                              Compressed
+                            <span className="text-xs font-semibold text-green-500 bg-green-500/10 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                              <CheckCircle2 className="h-3 w-3" /> Compressed
                             </span>
                             <p className="text-[10px] text-muted-foreground mt-0.5">
                               {formatBytes(item.compressedSize || 0)}
@@ -576,9 +750,9 @@ Original Size: ${(meta.size / (1024 * 1024)).toFixed(2)}MB`;
                           {item.status === "ready" && (
                             <button
                               onClick={(e) => {
-                                  e.stopPropagation();
-                                  startCompress(item.id);
-                                }}
+                                e.stopPropagation();
+                                handleStartProcess(item.id);
+                              }}
                               className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-all"
                               title="Start Compression"
                             >
@@ -589,9 +763,9 @@ Original Size: ${(meta.size / (1024 * 1024)).toFixed(2)}MB`;
                           {item.status === "processing" && (
                             <button
                               onClick={(e) => {
-                                  e.stopPropagation();
-                                  controlTask(item.id, "pause");
-                                }}
+                                e.stopPropagation();
+                                controlTask(item.id, "pause");
+                              }}
                               className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-all"
                               title="Pause"
                             >
@@ -602,9 +776,9 @@ Original Size: ${(meta.size / (1024 * 1024)).toFixed(2)}MB`;
                           {item.status === "paused" && (
                             <button
                               onClick={(e) => {
-                                  e.stopPropagation();
-                                  controlTask(item.id, "resume");
-                                }}
+                                e.stopPropagation();
+                                controlTask(item.id, "resume");
+                              }}
                               className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-all"
                               title="Resume"
                             >
@@ -615,34 +789,40 @@ Original Size: ${(meta.size / (1024 * 1024)).toFixed(2)}MB`;
                           {item.status === "completed" && (
                             <button
                               onClick={(e) => {
-                                  e.stopPropagation();
-                                  downloadFile(item.taskId || "", item.name);
-                                }}
+                                e.stopPropagation();
+                                downloadFile(item.taskId || "", item.name);
+                              }}
                               className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-all"
-                              title="Download"
+                              title="Download Video"
                             >
-                              <Download className="h-4 w-4" />
+                              <Download className="h-4 w-4 text-green-500" />
                             </button>
                           )}
 
-                          {item.status !== "completed" && (
-                            <button
-                              onClick={(e) => {
-                                  e.stopPropagation();
-                                  controlTask(item.id, "cancel");
-                                }}
-                              className="p-1.5 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-500/5 transition-all"
-                              title="Cancel / Remove"
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
-                          )}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              controlTask(item.id, "cancel");
+                            }}
+                            className="p-1.5 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-500/5 transition-all"
+                            title="Cancel / Remove"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
                         </div>
                       </div>
-                    </div>
+                    </motion.div>
                   );
                 })}
               </div>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-border/40 p-8 glass text-center flex flex-col items-center justify-center py-12 space-y-3">
+              <Film className="h-8 w-8 text-muted-foreground/50" />
+              <h3 className="text-sm font-semibold text-foreground">No videos in queue</h3>
+              <p className="text-xs text-muted-foreground max-w-sm">
+                Drop your video files above to start compressing with custom presets.
+              </p>
             </div>
           )}
         </div>
@@ -656,14 +836,14 @@ Original Size: ${(meta.size / (1024 * 1024)).toFixed(2)}MB`;
                 <h3 className="text-base font-bold text-foreground truncate" title={selectedItem.name}>
                   {selectedItem.name}
                 </h3>
-                <p className="text-xs text-muted-foreground">Configure processing settings for this file.</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Configure processing preset & options</p>
               </div>
 
               {/* Video Info Section */}
               {selectedItem.metadata && (
                 <div className="space-y-3">
                   <div className="flex justify-between items-center text-xs">
-                    <span className="font-semibold text-foreground">Source Video Info</span>
+                    <span className="font-semibold text-foreground">Source Specs</span>
                     <button
                       onClick={() => copyMetadata(selectedItem.metadata)}
                       className="text-muted-foreground hover:text-foreground flex items-center gap-1 transition-all"
@@ -673,67 +853,79 @@ Original Size: ${(meta.size / (1024 * 1024)).toFixed(2)}MB`;
                       ) : (
                         <Copy className="h-3.5 w-3.5" />
                       )}
-                      Copy
+                      Copy Specs
                     </button>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs rounded-xl border border-border/20 p-3.5 bg-foreground/[0.01]">
+                  <div className="grid grid-cols-2 gap-2 text-xs rounded-xl border border-border/20 p-3 bg-foreground/[0.01]">
                     <div>
-                      <span className="text-muted-foreground block">Resolution</span>
+                      <span className="text-muted-foreground block text-[10px]">Resolution</span>
                       <span className="font-medium text-foreground">
                         {selectedItem.metadata.width}x{selectedItem.metadata.height}
                       </span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground block">Codec</span>
+                      <span className="text-muted-foreground block text-[10px]">Codec</span>
                       <span className="font-medium text-foreground truncate block">
                         {selectedItem.metadata.video_codec}
                       </span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground block">Duration</span>
+                      <span className="text-muted-foreground block text-[10px]">Duration</span>
                       <span className="font-medium text-foreground">
                         {selectedItem.metadata.duration.toFixed(1)}s
                       </span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground block">FPS</span>
+                      <span className="text-muted-foreground block text-[10px]">FPS</span>
                       <span className="font-medium text-foreground">{selectedItem.metadata.fps}</span>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Compression Configuration */}
+              {/* Smart Presets Selection Grid */}
               {selectedItem.status === "ready" && (
                 <div className="space-y-5">
-                  <div className="space-y-2">
-                    <label className="text-xs font-semibold text-foreground">Quality Preset</label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {["high", "balanced", "max"].map((preset) => (
-                        <button
-                          key={preset}
-                          onClick={() =>
-                            updateItem(selectedItem.id, {
-                              options: { ...selectedItem.options, preset },
-                            })
-                          }
-                          className={`rounded-lg px-2.5 py-2 text-xs font-medium border text-center transition-all ${
-                            selectedItem.options.preset === preset
-                              ? "border-foreground bg-foreground/5 dark:bg-foreground/10 text-foreground font-semibold"
-                              : "border-border/40 text-muted-foreground hover:text-foreground hover:bg-foreground/5"
-                          }`}
-                        >
-                          {preset === "high" ? "High" : preset === "max" ? "Max Size" : "Balanced"}
-                        </button>
-                      ))}
+                  <SmartPresetsGrid
+                    selectedPresetId={selectedItem.options.preset}
+                    onSelectPreset={(presetObj) => selectPreset(selectedItem.id, presetObj)}
+                  />
+
+                  {/* Pre-Compression Estimation Box */}
+                  <div className="rounded-xl border border-border/25 p-3.5 bg-foreground/[0.015] space-y-2.5">
+                    <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                      <Gauge className="h-3.5 w-3.5" /> Output Estimation
+                    </span>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <span className="text-muted-foreground block text-[10px]">Est. Output Size</span>
+                        <span className="font-bold text-foreground">
+                          {formatBytes(currentEst.estSize)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground block text-[10px]">Est. Space Saved</span>
+                        <span className="font-bold text-green-500">
+                          ~{currentEst.estReduction}% Reduction
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground block text-[10px]">Target Quality</span>
+                        <span className="font-medium text-foreground truncate block">
+                          {currentEst.quality}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground block text-[10px]">Encoding Speed</span>
+                        <span className="font-medium text-foreground truncate block">
+                          {currentEst.speedEst}
+                        </span>
+                      </div>
                     </div>
-                    <p className="text-[10px] text-muted-foreground text-center">
-                      Est. savings: {getSavingsEstimate(selectedItem.options.preset)}
-                    </p>
                   </div>
 
-                  {/* Advanced Toggle */}
-                  <div className="border-t border-border/10 pt-4">
+                  {/* Advanced Options Toggle & Panel */}
+                  <div className="border-t border-border/10 pt-3">
                     <button
                       onClick={() => setShowAdvanced(!showAdvanced)}
                       className="text-xs font-semibold text-foreground hover:opacity-80 flex items-center gap-1.5 transition-all"
@@ -743,116 +935,17 @@ Original Size: ${(meta.size / (1024 * 1024)).toFixed(2)}MB`;
                     </button>
 
                     {showAdvanced && (
-                      <div className="mt-4 space-y-4 pt-2 border-t border-dashed border-border/20">
-                        {/* CRF Slider */}
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-xs">
-                            <label className="font-medium text-foreground">CRF (Constant Rate Factor)</label>
-                            <span className="font-bold text-foreground">
-                              {selectedItem.options.crf ?? 24}
-                            </span>
-                          </div>
-                          <input
-                            type="range"
-                            min="15"
-                            max="35"
-                            value={selectedItem.options.crf ?? 24}
-                            onChange={(e) =>
-                              updateItem(selectedItem.id, {
-                                options: { ...selectedItem.options, crf: parseInt(e.target.value) },
-                              })
-                            }
-                            className="w-full h-1 bg-foreground/10 rounded-lg appearance-none cursor-pointer accent-foreground"
-                          />
-                          <p className="text-[9px] text-muted-foreground">
-                            15 (High size/high quality) to 35 (Tiny size/lower quality).
-                          </p>
-                        </div>
-
-                        {/* Custom video bitrate */}
-                        <div className="space-y-1">
-                          <label className="text-xs font-medium text-foreground block">
-                            Target Video Bitrate (Override Preset)
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="e.g. 1500k, 2M"
-                            value={selectedItem.options.videoBitrate || ""}
-                            onChange={(e) =>
-                              updateItem(selectedItem.id, {
-                                options: { ...selectedItem.options, videoBitrate: e.target.value },
-                              })
-                            }
-                            className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-foreground transition-all"
-                          />
-                        </div>
-
-                        {/* Custom Resolution Scale */}
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-medium text-muted-foreground">Width</label>
-                            <input
-                              type="number"
-                              placeholder="e.g. 1280"
-                              value={selectedItem.options.width || ""}
-                              onChange={(e) =>
-                                updateItem(selectedItem.id, {
-                                  options: {
-                                    ...selectedItem.options,
-                                    width: e.target.value ? parseInt(e.target.value) : undefined,
-                                  },
-                                })
-                              }
-                              className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-foreground transition-all"
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-medium text-muted-foreground">Height</label>
-                            <input
-                              type="number"
-                              placeholder="e.g. 720"
-                              value={selectedItem.options.height || ""}
-                              onChange={(e) =>
-                                updateItem(selectedItem.id, {
-                                  options: {
-                                    ...selectedItem.options,
-                                    height: e.target.value ? parseInt(e.target.value) : undefined,
-                                  },
-                                })
-                              }
-                              className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-foreground transition-all"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Framerate selection */}
-                        <div className="space-y-1">
-                          <label className="text-xs font-medium text-foreground block">Frame Rate</label>
-                          <select
-                            value={selectedItem.options.fps || ""}
-                            onChange={(e) =>
-                              updateItem(selectedItem.id, {
-                                options: {
-                                  ...selectedItem.options,
-                                  fps: e.target.value ? parseFloat(e.target.value) : undefined,
-                                },
-                              })
-                            }
-                            className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-foreground transition-all"
-                          >
-                            <option value="">Keep Original</option>
-                            <option value="24">24 FPS</option>
-                            <option value="30">30 FPS</option>
-                            <option value="60">60 FPS</option>
-                          </select>
-                        </div>
-                      </div>
+                      <AdvancedOptionsPanel
+                        options={selectedItem.options}
+                        onChangeOptions={(newOpts) => updateItem(selectedItem.id, { options: newOpts })}
+                      />
                     )}
                   </div>
 
                   <button
-                    onClick={() => startCompress(selectedItem.id)}
-                    className="w-full py-3 px-4 rounded-xl bg-foreground text-background dark:bg-foreground dark:text-background font-semibold hover:opacity-90 active:scale-98 transition-all flex items-center justify-center gap-1.5 shadow-md"
+                    onClick={() => handleStartProcess(selectedItem.id)}
+                    disabled={selectedItem.status === "processing"}
+                    className="w-full py-3 px-4 rounded-xl bg-foreground text-background dark:bg-foreground dark:text-background font-semibold hover:opacity-90 active:scale-98 transition-all flex items-center justify-center gap-2 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Play className="h-4.5 w-4.5" />
                     Compress Video
@@ -860,37 +953,56 @@ Original Size: ${(meta.size / (1024 * 1024)).toFixed(2)}MB`;
                 </div>
               )}
 
-              {/* Compression Progress Details */}
+              {/* Compression Live Progress Experience */}
               {(selectedItem.status === "processing" || selectedItem.status === "paused") && (
-                <div className="space-y-4 rounded-xl border border-border/20 p-4 bg-foreground/[0.01]">
-                  <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider">
-                    Compressing File
-                  </h4>
-                  <div className="space-y-2 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Status</span>
-                      <span className="font-semibold text-foreground capitalize">
-                        {selectedItem.status}
-                      </span>
+                <div className="space-y-4 rounded-xl border border-border/20 p-4 bg-foreground/[0.015]">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                      <RefreshCw className={`h-3.5 w-3.5 ${selectedItem.status === "processing" ? "animate-spin" : ""}`} />
+                      {selectedItem.status === "paused" ? "Encoding Paused" : "Encoding Video..."}
+                    </h4>
+                    <span className="text-xs font-bold text-foreground font-mono">
+                      {selectedItem.progress}%
+                    </span>
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div className="h-2 w-full rounded-full bg-foreground/10 overflow-hidden">
+                    <div
+                      className="h-full bg-foreground transition-all duration-300"
+                      style={{ width: `${selectedItem.progress}%` }}
+                    />
+                  </div>
+
+                  {/* Live Progress Grid */}
+                  <div className="grid grid-cols-2 gap-2 text-xs pt-1">
+                    <div>
+                      <span className="text-muted-foreground block text-[10px]">Speed</span>
+                      <span className="font-semibold text-foreground">{selectedItem.speed || "1.0x"}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Speed</span>
-                      <span className="font-semibold text-foreground">{selectedItem.speed}</span>
+                    <div>
+                      <span className="text-muted-foreground block text-[10px]">Current FPS</span>
+                      <span className="font-semibold text-foreground">{selectedItem.fps || 0} FPS</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Elapsed Time</span>
-                      <span className="font-semibold text-foreground">
-                        {selectedItem.elapsed.toFixed(0)}s
-                      </span>
+                    <div>
+                      <span className="text-muted-foreground block text-[10px]">Elapsed Time</span>
+                      <span className="font-semibold text-foreground">{selectedItem.elapsed.toFixed(0)}s</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Estimated Remaining</span>
-                      <span className="font-semibold text-foreground">
-                        {selectedItem.eta.toFixed(0)}s
-                      </span>
+                    <div>
+                      <span className="text-muted-foreground block text-[10px]">ETA</span>
+                      <span className="font-semibold text-foreground">{selectedItem.eta.toFixed(0)}s</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground block text-[10px]">Original Size</span>
+                      <span className="font-semibold text-foreground">{formatBytes(selectedItem.size)}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground block text-[10px]">Est. Final Size</span>
+                      <span className="font-semibold text-green-500">{formatBytes(currentEst.estSize)}</span>
                     </div>
                   </div>
 
+                  {/* Task Controls: Pause, Resume, Cancel */}
                   <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border/10">
                     <button
                       onClick={() =>
@@ -923,31 +1035,18 @@ Original Size: ${(meta.size / (1024 * 1024)).toFixed(2)}MB`;
 
               {/* Compression Results */}
               {selectedItem.status === "completed" && (
-                <div className="space-y-5">
-                  <SizeComparisonChart
-                    originalSize={selectedItem.size}
-                    compressedSize={selectedItem.compressedSize || 0}
-                  />
-
-                  <div className="space-y-2">
-                    <button
-                      onClick={() => downloadFile(selectedItem.taskId || "", selectedItem.name)}
-                      className="w-full py-3 px-4 rounded-xl bg-foreground text-background dark:bg-foreground dark:text-background font-semibold hover:opacity-90 active:scale-98 transition-all flex items-center justify-center gap-1.5 shadow-md"
-                    >
-                      <Download className="h-4.5 w-4.5" />
-                      Download Video
-                    </button>
-                    <button
-                      onClick={() => {
-                        setQueue((prev) => prev.filter((q) => q.id !== selectedItem.id));
-                        setSelectedItemId(null);
-                      }}
-                      className="w-full py-2.5 px-4 rounded-xl border border-border bg-background/50 hover:bg-foreground/5 text-xs font-semibold transition-all text-center"
-                    >
-                      Compress Another Video
-                    </button>
-                  </div>
-                </div>
+                <BeforeAfterPanel
+                  item={selectedItem}
+                  backendUrl={backendUrl}
+                  onDownload={downloadFile}
+                  onOpenFolder={handleOpenFolder}
+                  onPreviewVideo={(itemToPreview) => setPreviewItem(itemToPreview)}
+                  onViewLogs={(taskIdToLog) => setViewingLogTaskId(taskIdToLog)}
+                  onCompressAnother={() => {
+                    setQueue((prev) => prev.filter((q) => q.id !== selectedItem.id));
+                    setSelectedItemId(null);
+                  }}
+                />
               )}
             </div>
           ) : (
@@ -955,9 +1054,9 @@ Original Size: ${(meta.size / (1024 * 1024)).toFixed(2)}MB`;
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-foreground/5 dark:bg-foreground/10 text-foreground mb-1">
                 <Settings2 className="h-5 w-5 animate-pulse-slow" />
               </div>
-              <h3 className="text-sm font-semibold text-foreground">Configure Options</h3>
+              <h3 className="text-sm font-semibold text-foreground">Preset Options</h3>
               <p className="text-xs text-muted-foreground max-w-[200px] leading-relaxed">
-                Upload a video to specify custom frame rates, codecs, sizes, or select compression options.
+                Select a video from the queue to pick smart presets or customize CRF and resolution.
               </p>
             </div>
           )}
@@ -970,10 +1069,10 @@ Original Size: ${(meta.size / (1024 * 1024)).toFixed(2)}MB`;
           <div>
             <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider flex items-center gap-1.5">
               <Clock className="h-4 w-4" />
-              Local Compression Logs
+              SQLite Compression History
             </h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Stored securely on the local SQLite server database.
+              Stored securely in local SQLite database.
             </p>
           </div>
           <button
@@ -982,8 +1081,35 @@ Original Size: ${(meta.size / (1024 * 1024)).toFixed(2)}MB`;
             disabled={historyLoading}
           >
             <RefreshCw className={`h-3.5 w-3.5 ${historyLoading ? "animate-spin" : ""}`} />
-            Refresh
+            Refresh History
           </button>
+        </div>
+
+        {/* Search & Filter Toolbar */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-1 text-xs">
+          <div className="flex items-center space-x-2 flex-1 max-w-xs">
+            <input
+              type="text"
+              placeholder="Search history..."
+              value={historySearch}
+              onChange={(e) => setHistorySearch(e.target.value)}
+              className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-foreground transition-all"
+            />
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <label className="text-muted-foreground font-medium">Status Filter:</label>
+            <select
+              value={historyStatusFilter}
+              onChange={(e) => setHistoryStatusFilter(e.target.value)}
+              className="rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-foreground transition-all"
+            >
+              <option value="all">All Logs</option>
+              <option value="completed">Completed</option>
+              <option value="failed">Failed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
         </div>
 
         {history.length > 0 ? (
@@ -991,66 +1117,110 @@ Original Size: ${(meta.size / (1024 * 1024)).toFixed(2)}MB`;
             <table className="w-full text-left text-xs font-sans border-collapse">
               <thead>
                 <tr className="border-b border-border/20 text-muted-foreground font-semibold">
-                  <th className="py-3 px-2">Filename</th>
+                  <th className="py-3 px-2">Original Filename</th>
+                  <th className="py-3 px-2">Preset</th>
+                  <th className="py-3 px-2">Codec / Res</th>
                   <th className="py-3 px-2">Duration</th>
                   <th className="py-3 px-2 text-right">Original Size</th>
                   <th className="py-3 px-2 text-right">Compressed</th>
-                  <th className="py-3 px-2 text-right">Saved</th>
+                  <th className="py-3 px-2 text-right">Saved Space</th>
+                  <th className="py-3 px-2 text-right">Date & Time</th>
                   <th className="py-3 px-2 text-right">Status</th>
                   <th className="py-3 px-2 text-center">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/10 text-foreground/90">
-                {history.map((row) => (
-                  <tr key={row.id} className="hover:bg-foreground/[0.005] transition-colors">
-                    <td className="py-3.5 px-2 font-medium truncate max-w-[150px] sm:max-w-[200px]" title={row.filename}>
-                      {row.filename}
-                    </td>
-                    <td className="py-3.5 px-2 text-muted-foreground">{row.duration.toFixed(0)}s</td>
-                    <td className="py-3.5 px-2 text-right text-muted-foreground">{formatBytes(row.original_size)}</td>
-                    <td className="py-3.5 px-2 text-right font-medium">
-                      {row.compressed_size ? formatBytes(row.compressed_size) : "-"}
-                    </td>
-                    <td className="py-3.5 px-2 text-right text-green-500 font-bold">
-                      {row.saved_percentage ? `-${row.saved_percentage}%` : "-"}
-                    </td>
-                    <td className="py-3.5 px-2 text-right">
-                      <span
-                        className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                          row.status === "completed"
-                            ? "bg-green-500/10 text-green-500"
-                            : row.status === "failed"
-                            ? "bg-red-500/10 text-red-500"
-                            : row.status === "cancelled"
-                            ? "bg-yellow-500/10 text-yellow-500"
-                            : "bg-foreground/5 text-foreground/75"
-                        }`}
-                      >
-                        {row.status}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-2 text-center">
-                      <div className="flex items-center justify-center space-x-1.5">
-                        {row.status === "completed" && row.file_exists && (
-                          <button
-                            onClick={() => downloadFromHistory(row.id, `compressed_${row.filename}`)}
-                            className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-all"
-                            title="Download Again"
+                {history
+                  .filter((row) => {
+                    const matchesSearch =
+                      !historySearch ||
+                      row.filename.toLowerCase().includes(historySearch.toLowerCase()) ||
+                      (row.preset_used && row.preset_used.toLowerCase().includes(historySearch.toLowerCase())) ||
+                      (row.video_codec && row.video_codec.toLowerCase().includes(historySearch.toLowerCase()));
+
+                    const matchesStatus =
+                      historyStatusFilter === "all" || row.status === historyStatusFilter;
+
+                    return matchesSearch && matchesStatus;
+                  })
+                  .map((row) => {
+                    const savedMB = row.original_size && row.compressed_size ? formatBytes(row.original_size - row.compressed_size) : "-";
+                    return (
+                      <tr key={row.id} className="hover:bg-foreground/[0.005] transition-colors">
+                        <td className="py-3.5 px-2 font-medium truncate max-w-[150px] sm:max-w-[200px]" title={row.filename}>
+                          {row.filename}
+                        </td>
+                        <td className="py-3.5 px-2 font-medium capitalize text-muted-foreground">
+                          {row.preset_used || "balanced"}
+                        </td>
+                        <td className="py-3.5 px-2 text-muted-foreground">
+                          {row.video_codec || "h264"} &middot; {row.resolution || "1080p"}
+                        </td>
+                        <td className="py-3.5 px-2 text-muted-foreground">{row.duration ? `${row.duration.toFixed(0)}s` : "-"}</td>
+                        <td className="py-3.5 px-2 text-right text-muted-foreground">{formatBytes(row.original_size)}</td>
+                        <td className="py-3.5 px-2 text-right font-medium">
+                          {row.compressed_size ? formatBytes(row.compressed_size) : "-"}
+                        </td>
+                        <td className="py-3.5 px-2 text-right text-green-500 font-bold">
+                          {row.saved_percentage ? `-${row.saved_percentage}% (${savedMB})` : "-"}
+                        </td>
+                        <td className="py-3.5 px-2 text-right text-muted-foreground">
+                          {formatDate(row.created_at)}
+                        </td>
+                        <td className="py-3.5 px-2 text-right">
+                          <span
+                            className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                              row.status === "completed"
+                                ? "bg-green-500/10 text-green-500"
+                                : row.status === "failed"
+                                ? "bg-red-500/10 text-red-500"
+                                : row.status === "cancelled"
+                                ? "bg-yellow-500/10 text-yellow-500"
+                                : "bg-foreground/5 text-foreground/75"
+                            }`}
                           >
-                            <Download className="h-3.5 w-3.5" />
-                          </button>
-                        )}
-                        <button
-                          onClick={() => deleteHistoryRow(row.id)}
-                          className="p-1 rounded text-muted-foreground hover:text-red-500 hover:bg-red-500/5 transition-all"
-                          title="Clear entry"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                            {row.status}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-2 text-center">
+                          <div className="flex items-center justify-center space-x-1">
+                            {row.status === "completed" && row.file_exists && (
+                              <>
+                                <button
+                                  onClick={() => downloadFromHistory(row.id, `compressed_${row.filename}`)}
+                                  className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-all"
+                                  title="Download Again"
+                                >
+                                  <Download className="h-3.5 w-3.5 text-green-500" />
+                                </button>
+                                <button
+                                  onClick={() => handleOpenFolder(row.id)}
+                                  className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-all"
+                                  title="Open Folder"
+                                >
+                                  <Folder className="h-3.5 w-3.5" />
+                                </button>
+                              </>
+                            )}
+                            <button
+                              onClick={() => setViewingLogTaskId(row.id)}
+                              className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-all"
+                              title="View FFmpeg Logs"
+                            >
+                              <FileText className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => deleteHistoryRow(row.id)}
+                              className="p-1 rounded text-muted-foreground hover:text-red-500 hover:bg-red-500/5 transition-all"
+                              title="Clear Entry"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
               </tbody>
             </table>
           </div>
@@ -1061,6 +1231,24 @@ Original Size: ${(meta.size / (1024 * 1024)).toFixed(2)}MB`;
           </div>
         )}
       </div>
+
+      {/* Video Preview Modal */}
+      {previewItem && (
+        <VideoPreviewModal
+          item={previewItem}
+          backendUrl={backendUrl}
+          onClose={() => setPreviewItem(null)}
+        />
+      )}
+
+      {/* FFmpeg Log Modal */}
+      {viewingLogTaskId && (
+        <FFmpegLogModal
+          taskId={viewingLogTaskId}
+          backendUrl={backendUrl}
+          onClose={() => setViewingLogTaskId(null)}
+        />
+      )}
     </div>
   );
 };

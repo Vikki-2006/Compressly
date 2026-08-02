@@ -5,17 +5,42 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from sqlalchemy import text
 from app.database.connection import engine, Base
 from app.utils.storage import init_directories, start_cleanup_thread, UPLOADS_DIR
 from app.routers import compress, history, settings, stats, auth
 from app.middleware.error_handler import GlobalErrorHandlerMiddleware
 
+def ensure_db_schema():
+    """Ensure all tables and columns exist in SQLite database safely via ALTER TABLE."""
+    Base.metadata.create_all(bind=engine)
+    with engine.connect() as conn:
+        try:
+            res = conn.execute(text("PRAGMA table_info(history)")).fetchall()
+            columns = [row[1] for row in res]
+            if "task_type" not in columns:
+                conn.execute(text("ALTER TABLE history ADD COLUMN task_type VARCHAR DEFAULT 'compression'"))
+            if "preset_used" not in columns:
+                conn.execute(text("ALTER TABLE history ADD COLUMN preset_used VARCHAR DEFAULT 'balanced'"))
+            if "video_codec" not in columns:
+                conn.execute(text("ALTER TABLE history ADD COLUMN video_codec VARCHAR DEFAULT 'h264'"))
+            if "resolution" not in columns:
+                conn.execute(text("ALTER TABLE history ADD COLUMN resolution VARCHAR DEFAULT '1080p'"))
+            if "output_filename" not in columns:
+                conn.execute(text("ALTER TABLE history ADD COLUMN output_filename VARCHAR"))
+            if "saved_mb" not in columns:
+                conn.execute(text("ALTER TABLE history ADD COLUMN saved_mb FLOAT DEFAULT 0.0"))
+            if "ffmpeg_log" not in columns:
+                conn.execute(text("ALTER TABLE history ADD COLUMN ffmpeg_log TEXT"))
+            conn.commit()
+        except Exception as e:
+            pass
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: Ensure directories, db tables, and clean logs exist
     init_directories()
-    # Create all ORM tables in SQLite
-    Base.metadata.create_all(bind=engine)
+    ensure_db_schema()
     start_cleanup_thread()
     yield
     # Shutdown: Nothing specific needed

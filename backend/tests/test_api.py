@@ -233,7 +233,15 @@ def test_structured_logger():
     handler.setFormatter(JsonFormatter())
     test_logger.addHandler(handler)
     
-    test_logger.info("Verifying structured logs", extra={"request_id": "test-req-uuid"})
+    test_logger.info(
+        "Verifying structured logs",
+        extra={
+            "request_id": "test-req-uuid",
+            "uploaded_filename": "test.mp4",
+            "file_size": 1024,
+            "custom_detail": {"key": "val"}
+        }
+    )
     
     log_output = stream.getvalue().strip()
     assert log_output != ""
@@ -242,4 +250,62 @@ def test_structured_logger():
     assert log_json["message"] == "Verifying structured logs"
     assert log_json["level"] == "INFO"
     assert log_json["request_id"] == "test-req-uuid"
+    assert log_json["uploaded_filename"] == "test.mp4"
+    assert log_json["file_size"] == 1024
     assert "timestamp" in log_json
+
+def test_find_executable_resolver():
+    """Verify find_executable correctly resolves executables or returns fallback."""
+    from app.services.video import find_executable, get_ffmpeg_path, get_ffprobe_path
+    
+    ffmpeg_p = get_ffmpeg_path()
+    ffprobe_p = get_ffprobe_path()
+    assert ffmpeg_p is not None
+    assert ffprobe_p is not None
+
+def test_metadata_unsupported_format_response():
+    """Verify /api/metadata returns structured HTTP 400 response on invalid extension."""
+    files = {"file": ("test.txt", b"dummy content", "text/plain")}
+    response = client.post("/api/metadata", files=files)
+    assert response.status_code == 400
+    data = response.json()
+    assert "detail" in data
+    detail = data["detail"]
+    assert detail["success"] is False
+    assert detail["stage"] == "validation"
+    assert "Unsupported" in detail["error"]
+
+def test_phase1_logs_and_history_schema():
+    """Verify Phase 1 history repository columns and log endpoint behavior."""
+    db = TestingSessionLocal()
+    try:
+        repo = HistoryRepository(db)
+        entry = repo.add(
+            task_id="phase1_test_task",
+            filename="sample.mp4",
+            original_size=5000000,
+            duration=10.0,
+            status="completed",
+            preset_used="whatsapp",
+            video_codec="hevc",
+            resolution="1280x720",
+            output_filename="compressed_sample.mp4"
+        )
+        repo.update(
+            task_id="phase1_test_task",
+            compressed_size=2000000,
+            saved_percentage=60.0,
+            compression_time=2.5,
+            status="completed",
+            saved_mb=3.0,
+            ffmpeg_log="CMD: ffmpeg -i sample.mp4 output.mp4\nSTDERR:\nOK"
+        )
+        
+        # Test GET /api/compress/logs/phase1_test_task
+        log_res = client.get("/api/compress/logs/phase1_test_task")
+        assert log_res.status_code == 200
+        log_data = log_res.json()
+        assert log_data["task_id"] == "phase1_test_task"
+        assert "ffmpeg -i" in log_data["log"]
+    finally:
+        db.close()

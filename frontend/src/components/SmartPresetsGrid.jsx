@@ -1,0 +1,340 @@
+import React from "react";
+import { Sparkles, Check } from "lucide-react";
+
+export const SMART_PRESETS = [
+  {
+    id: "whatsapp",
+    icon: "📱",
+    title: "WhatsApp",
+    description: "Mobile optimized, target under 16 MB",
+    badge: "< 16MB",
+    crf: 26,
+    video_codec: "h264",
+    width: 1280,
+    height: 720,
+    fps: 30,
+    audio_bitrate: "128k",
+    audio_codec: "aac",
+    container: "mp4",
+    quality: "Good Mobile Quality",
+    speedEst: "Fast (Mobile)",
+    estReduction: 60,
+  },
+  {
+    id: "instagram_feed",
+    icon: "📸",
+    title: "Instagram Feed",
+    description: "1080x1080 square format",
+    badge: "1:1 Square",
+    crf: 20,
+    video_codec: "h264",
+    width: 1080,
+    height: 1080,
+    fps: 30,
+    audio_bitrate: "128k",
+    audio_codec: "aac",
+    container: "mp4",
+    quality: "High Quality",
+    speedEst: "Balanced",
+    estReduction: 35,
+  },
+  {
+    id: "instagram_reel",
+    icon: "🎥",
+    title: "Instagram Reel",
+    description: "1080x1920 vertical format",
+    badge: "9:16 Vertical",
+    crf: 21,
+    video_codec: "h264",
+    width: 1080,
+    height: 1920,
+    fps: 30,
+    audio_bitrate: "192k",
+    audio_codec: "aac",
+    container: "mp4",
+    quality: "High Quality Vertical",
+    speedEst: "Balanced",
+    estReduction: 40,
+  },
+  {
+    id: "tiktok",
+    icon: "🎵",
+    title: "TikTok",
+    description: "1080x1920 vertical short video",
+    badge: "9:16 Vertical",
+    crf: 21,
+    video_codec: "h264",
+    width: 1080,
+    height: 1920,
+    fps: 30,
+    audio_bitrate: "192k",
+    audio_codec: "aac",
+    container: "mp4",
+    quality: "High Quality Vertical",
+    speedEst: "Balanced",
+    estReduction: 40,
+  },
+  {
+    id: "youtube_1080p",
+    icon: "▶",
+    title: "YouTube 1080p",
+    description: "Crisp 1080p web video upload",
+    badge: "1080p High",
+    crf: 18,
+    video_codec: "h264",
+    width: 1920,
+    height: 1080,
+    fps: 60,
+    audio_bitrate: "384k",
+    audio_codec: "aac",
+    container: "mp4",
+    quality: "Ultra High Quality",
+    speedEst: "High Quality",
+    estReduction: 25,
+  },
+  {
+    id: "youtube_shorts",
+    icon: "⚡",
+    title: "YouTube Shorts",
+    description: "Vertical 1080x1920 YouTube video",
+    badge: "Shorts",
+    crf: 20,
+    video_codec: "h264",
+    width: 1080,
+    height: 1920,
+    fps: 60,
+    audio_bitrate: "256k",
+    audio_codec: "aac",
+    container: "mp4",
+    quality: "High Quality",
+    speedEst: "Balanced",
+    estReduction: 35,
+  },
+  {
+    id: "facebook",
+    icon: "📘",
+    title: "Facebook Video",
+    description: "Standard web video preset",
+    badge: "1080p Web",
+    crf: 22,
+    video_codec: "h264",
+    width: 1920,
+    height: 1080,
+    fps: 30,
+    audio_bitrate: "128k",
+    audio_codec: "aac",
+    container: "mp4",
+    quality: "Balanced Quality",
+    speedEst: "Fast",
+    estReduction: 45,
+  },
+  {
+    id: "telegram",
+    icon: "✈",
+    title: "Telegram",
+    description: "Balanced compression for fast sharing",
+    badge: "720p Balanced",
+    crf: 24,
+    video_codec: "h264",
+    width: 1280,
+    height: 720,
+    fps: 30,
+    audio_bitrate: "128k",
+    audio_codec: "aac",
+    container: "mp4",
+    quality: "Balanced Quality",
+    speedEst: "Fast",
+    estReduction: 50,
+  },
+  {
+    id: "discord",
+    icon: "💬",
+    title: "Discord Attachment",
+    description: "Compact size under 25 MB",
+    badge: "< 25MB",
+    crf: 26,
+    video_codec: "h264",
+    width: 1280,
+    height: 720,
+    fps: 30,
+    audio_bitrate: "96k",
+    audio_codec: "aac",
+    container: "mp4",
+    quality: "Compact Size",
+    speedEst: "Very Fast",
+    estReduction: 65,
+  },
+  {
+    id: "email",
+    icon: "💼",
+    title: "Email Attachment",
+    description: "Target under 25 MB file size",
+    badge: "< 25MB",
+    crf: 28,
+    video_codec: "h264",
+    width: 854,
+    height: 480,
+    fps: 24,
+    audio_bitrate: "96k",
+    audio_codec: "aac",
+    container: "mp4",
+    quality: "Compact Size",
+    speedEst: "Very Fast",
+    estReduction: 75,
+  },
+  {
+    id: "archive",
+    icon: "🖥",
+    title: "Archive Quality",
+    description: "Visually lossless video preservation",
+    badge: "Archival",
+    crf: 16,
+    video_codec: "h264",
+    width: undefined,
+    height: undefined,
+    fps: undefined,
+    audio_bitrate: "320k",
+    audio_codec: "aac",
+    container: "mp4",
+    quality: "Visually Lossless",
+    speedEst: "Archival",
+    estReduction: 15,
+  },
+  {
+    id: "max_compression",
+    icon: "⚡",
+    title: "Max Compression",
+    description: "Smallest possible file size",
+    badge: "Tiny File",
+    crf: 32,
+    video_codec: "h264",
+    width: 640,
+    height: 360,
+    fps: 24,
+    audio_bitrate: "64k",
+    audio_codec: "aac",
+    container: "mp4",
+    quality: "Basic / Smallest",
+    speedEst: "Ultra Fast",
+    estReduction: 85,
+  },
+  {
+    id: "lossless",
+    icon: "💎",
+    title: "Lossless (CRF 14)",
+    description: "Near original quality master file",
+    badge: "CRF 14",
+    crf: 14,
+    video_codec: "h264",
+    width: undefined,
+    height: undefined,
+    fps: undefined,
+    audio_bitrate: "320k",
+    audio_codec: "aac",
+    container: "mp4",
+    quality: "Master Quality",
+    speedEst: "Slower",
+    estReduction: 10,
+  },
+  {
+    id: "balanced",
+    icon: "⚖",
+    title: "Balanced Preset",
+    description: "Ideal balance of size and video quality",
+    badge: "Standard",
+    crf: 23,
+    video_codec: "h264",
+    width: 1280,
+    height: 720,
+    fps: 30,
+    audio_bitrate: "128k",
+    audio_codec: "aac",
+    container: "mp4",
+    quality: "Balanced Quality",
+    speedEst: "Fast",
+    estReduction: 45,
+  },
+  {
+    id: "high_quality",
+    icon: "🌟",
+    title: "High Quality",
+    description: "Higher bitrate for clear playback",
+    badge: "CRF 18",
+    crf: 18,
+    video_codec: "h264",
+    width: 1920,
+    height: 1080,
+    fps: 60,
+    audio_bitrate: "192k",
+    audio_codec: "aac",
+    container: "mp4",
+    quality: "High Quality",
+    speedEst: "Balanced",
+    estReduction: 25,
+  },
+  {
+    id: "audio_only",
+    icon: "🔊",
+    title: "Audio Only (MP3)",
+    description: "Extract soundtrack to MP3 format",
+    badge: "MP3 Audio",
+    crf: undefined,
+    video_codec: undefined,
+    width: undefined,
+    height: undefined,
+    fps: undefined,
+    audio_bitrate: "192k",
+    audio_codec: "mp3",
+    container: "mp3",
+    task_type: "audio_extraction",
+    quality: "Audio Extract",
+    speedEst: "Ultra Fast",
+    estReduction: 95,
+  },
+];
+
+export const SmartPresetsGrid = ({ selectedPresetId, onSelectPreset }) => {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <label className="text-xs font-semibold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+          <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+          Smart Presets ({SMART_PRESETS.length})
+        </label>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 max-h-[300px] overflow-y-auto pr-1">
+        {SMART_PRESETS.map((preset) => {
+          const isSelected = selectedPresetId === preset.id;
+          return (
+            <div
+              key={preset.id}
+              onClick={() => onSelectPreset(preset)}
+              className={`p-3 rounded-xl border cursor-pointer transition-all flex flex-col justify-between space-y-1.5 ${
+                isSelected
+                  ? "border-foreground bg-foreground/5 dark:bg-foreground/10 shadow-sm"
+                  : "border-border/40 hover:border-border hover:bg-foreground/[0.005]"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-base">{preset.icon}</span>
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-foreground/10 text-foreground flex items-center gap-1">
+                  {preset.badge}
+                  {isSelected && <Check className="h-2.5 w-2.5 text-green-500" />}
+                </span>
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-foreground leading-tight">
+                  {preset.title}
+                </h4>
+                <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">
+                  {preset.description}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};

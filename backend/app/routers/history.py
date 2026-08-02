@@ -38,6 +38,10 @@ def list_history(db: Session = Depends(get_db)):
             "created_at": log.created_at.isoformat() + "Z",
             "status": log.status,
             "task_type": log.task_type,
+            "preset_used": getattr(log, "preset_used", "balanced") or "balanced",
+            "video_codec": getattr(log, "video_codec", "h264") or "h264",
+            "resolution": getattr(log, "resolution", "1080p") or "1080p",
+            "saved_mb": getattr(log, "saved_mb", 0.0) or 0.0,
             "file_exists": file_exists
         })
     return result

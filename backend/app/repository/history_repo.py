@@ -21,7 +21,11 @@ class HistoryRepository:
         original_size: int, 
         duration: float, 
         status: str = "pending", 
-        task_type: str = "compression"
+        task_type: str = "compression",
+        preset_used: str = "balanced",
+        video_codec: str = "h264",
+        resolution: str = "1080p",
+        output_filename: str = None
     ) -> HistoryModel:
         """Inserts a new record into the history table."""
         entry = HistoryModel(
@@ -31,6 +35,10 @@ class HistoryRepository:
             duration=duration,
             status=status,
             task_type=task_type,
+            preset_used=preset_used,
+            video_codec=video_codec,
+            resolution=resolution,
+            output_filename=output_filename or f"compressed_{filename}",
             created_at=datetime.now(timezone.utc).replace(tzinfo=None)
         )
         self.db.add(entry)
@@ -44,7 +52,9 @@ class HistoryRepository:
         compressed_size: int = None, 
         saved_percentage: float = None, 
         compression_time: float = None, 
-        status: str = None
+        status: str = None,
+        saved_mb: float = None,
+        ffmpeg_log: str = None
     ) -> HistoryModel:
         """Updates a record inside the history table when compression completes or fails."""
         entry = self.get_by_id(task_id)
@@ -57,6 +67,10 @@ class HistoryRepository:
                 entry.compression_time = compression_time
             if status is not None:
                 entry.status = status
+            if saved_mb is not None:
+                entry.saved_mb = saved_mb
+            if ffmpeg_log is not None:
+                entry.ffmpeg_log = ffmpeg_log
             self.db.commit()
             self.db.refresh(entry)
         return entry

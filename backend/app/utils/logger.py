@@ -20,11 +20,22 @@ class JsonFormatter(logging.Formatter):
         if record.exc_info:
             log_data["exception"] = self.formatException(record.exc_info)
             
-        # Add custom extra variables from log context
-        if hasattr(record, "request_id"):
-            log_data["request_id"] = record.request_id
+        # Add custom extra variables from log context (all non-standard fields)
+        standard_fields = {
+            'name', 'msg', 'args', 'levelname', 'levelno', 'pathname', 'filename',
+            'module', 'exc_info', 'exc_text', 'stack_info', 'lineno', 'funcName',
+            'created', 'msecs', 'relativeCreated', 'thread', 'threadName',
+            'processName', 'process', 'message', 'asctime', 'taskName'
+        }
+        for key, value in record.__dict__.items():
+            if key not in standard_fields:
+                try:
+                    json.dumps(value)
+                    log_data[key] = value
+                except (TypeError, OverflowError):
+                    log_data[key] = str(value)
             
-        return json.dumps(log_data)
+        return json.dumps(log_data, default=str)
 
 def setup_logger(name: str = "compressly") -> logging.Logger:
     """Initialize structured JSON console logging handler."""

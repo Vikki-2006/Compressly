@@ -1,4 +1,4 @@
-<p align="center">
+<p align="center">;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   <img src="./logo/readme-logo.svg" alt="Compressly Logo" width="240">
 </p>
 

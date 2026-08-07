@@ -441,7 +441,16 @@ def get_task_logs(task_id: str, db: Session = Depends(get_db)):
 
 @router.post("/open-folder/{task_id}")
 def open_output_folder(task_id: str):
-    """Reveals the compressed video file in Windows File Explorer."""
+    """Reveals the compressed video file in Windows File Explorer (local Windows only).
+    On web/Linux deployments returns a friendly not-supported response.
+    """
+    # Only supported on local Windows installations
+    if os.name != "nt":
+        return {
+            "status": "not_supported",
+            "message": "File Explorer integration is only available on local Windows installations. Download your file using the Download button.",
+        }
+
     import subprocess
     from app.utils.storage import COMPRESSED_DIR
 

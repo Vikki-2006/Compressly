@@ -2,19 +2,27 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-# Resolve DB_PATH to workspace root history.db
-# __file__ is in backend/app/database/connection.py
-# Going up 3 levels relative to dirname(__file__) reaches the workspace root.
-DB_PATH = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "..", "history.db")
+# ─── Database Path Resolution ─────────────────────────────────────────────────
+# Supports DATABASE_URL env var for any external DB or custom path override.
+# Default: SQLite file at <backend_root>/history.db
+#   - Local dev:  c:\...\backend\history.db
+#   - Railway:    /app/history.db  (WORKDIR is /app = backend/)
+#
+# __file__ is backend/app/database/connection.py → go up 2 levels to reach backend/
+_BACKEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+_DEFAULT_DB_PATH = os.path.join(_BACKEND_DIR, "history.db")
+
+DATABASE_URL: str = os.environ.get(
+    "DATABASE_URL",
+    f"sqlite:///{_DEFAULT_DB_PATH}"
 )
-DATABASE_URL = f"sqlite:///{DB_PATH}"
+
+# SQLite-specific connection args (not needed for Postgres etc.)
+connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 
 engine = create_engine(
     DATABASE_URL,
-    connect_args={
-        "check_same_thread": False
-    },  # Required for SQLite with multithreading
+    connect_args=connect_args,
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -88,10 +89,18 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     )
 
 
-# CORS setup for React frontend connection
+# CORS setup — read allowed origins from environment variable for production.
+# Set ALLOWED_ORIGINS=https://your-app.vercel.app in Railway env vars.
+# Multiple origins: ALLOWED_ORIGINS=https://app.vercel.app,https://custom-domain.com
+_raw_origins = os.environ.get("ALLOWED_ORIGINS", "*")
+if _raw_origins == "*":
+    _cors_origins = ["*"]
+else:
+    _cors_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

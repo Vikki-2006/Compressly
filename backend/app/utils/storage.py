@@ -3,10 +3,17 @@ import time
 import shutil
 import threading
 
-# Resolve BASE_DIR to the workspace root: C:\...\Video Compressor(Compressly)
-# dirname(__file__) is C:\...\backend\app\utils
-# Going up 3 levels reaches the workspace root.
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+# ─── Path resolution ──────────────────────────────────────────────────────────
+# Inside Railway's Docker container, WORKDIR is /app (the backend/ directory).
+# We resolve storage directories relative to this file's package root (/app).
+# Supports DATA_DIR env var override for any deployment target.
+
+# __file__ is /app/app/utils/storage.py → go up 2 levels to reach /app
+_BACKEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+
+# Allow override via env var (useful for Railway volumes or custom setups)
+BASE_DIR = os.environ.get("DATA_DIR", _BACKEND_DIR)
+
 UPLOADS_DIR = os.path.join(BASE_DIR, "uploads")
 COMPRESSED_DIR = os.path.join(BASE_DIR, "compressed")
 TEMP_DIR = os.path.join(BASE_DIR, "temp")

@@ -3,17 +3,10 @@ import time
 import shutil
 import threading
 
-# ─── Path resolution ──────────────────────────────────────────────────────────
-# Inside Railway's Docker container, WORKDIR is /app (the backend/ directory).
-# We resolve storage directories relative to this file's package root (/app).
-# Supports DATA_DIR env var override for any deployment target.
-
-# __file__ is /app/app/utils/storage.py → go up 2 levels to reach /app
-_BACKEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-
-# Allow override via env var (useful for Railway volumes or custom setups)
-BASE_DIR = os.environ.get("DATA_DIR", _BACKEND_DIR)
-
+# Resolve BASE_DIR to the workspace root: C:\...\Video Compressor(Compressly)
+# dirname(__file__) is C:\...\backend\app\utils
+# Going up 3 levels reaches the workspace root.
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 UPLOADS_DIR = os.path.join(BASE_DIR, "uploads")
 COMPRESSED_DIR = os.path.join(BASE_DIR, "compressed")
 TEMP_DIR = os.path.join(BASE_DIR, "temp")
@@ -23,13 +16,11 @@ os.makedirs(UPLOADS_DIR, exist_ok=True)
 os.makedirs(COMPRESSED_DIR, exist_ok=True)
 os.makedirs(TEMP_DIR, exist_ok=True)
 
-
 def init_directories():
     """Double checks uploads, compressed, and temp directories exist."""
     os.makedirs(UPLOADS_DIR, exist_ok=True)
     os.makedirs(COMPRESSED_DIR, exist_ok=True)
     os.makedirs(TEMP_DIR, exist_ok=True)
-
 
 def delete_file_safe(file_path: str):
     """Safely removes a file or directory if it exists."""
@@ -41,7 +32,6 @@ def delete_file_safe(file_path: str):
                 os.remove(file_path)
         except Exception as e:
             print(f"[Storage] Failed to delete {file_path}: {e}")
-
 
 def cleanup_loop(max_age_seconds: int = 1800, check_interval_seconds: int = 120):
     """
@@ -56,7 +46,7 @@ def cleanup_loop(max_age_seconds: int = 1800, check_interval_seconds: int = 120)
                 for item in os.listdir(directory):
                     item_path = os.path.join(directory, item)
                     # Ignore system/hidden files
-                    if item.startswith("."):
+                    if item.startswith('.'):
                         continue
                     try:
                         mtime = os.path.getmtime(item_path)
@@ -68,7 +58,6 @@ def cleanup_loop(max_age_seconds: int = 1800, check_interval_seconds: int = 120)
         except Exception as e:
             print(f"[Cleanup] Error in cleanup cycle: {e}")
         time.sleep(check_interval_seconds)
-
 
 def start_cleanup_thread():
     """Launches the automatic directory cleanup thread in the background."""

@@ -34,8 +34,7 @@ import { VideoPreviewModal } from "../components/VideoPreviewModal.jsx";
 import { FFmpegLogModal } from "../components/FFmpegLogModal.jsx";
 
 export const AppMain = () => {
-  const defaultBackendUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
-  const backendUrl = localStorage.getItem("compressly_backend_url") || defaultBackendUrl;
+  const backendUrl = localStorage.getItem("compressly_backend_url") || "http://localhost:8000";
   const defaultPreset = localStorage.getItem("compressly_default_preset") || "telegram";
 
   const [queue, setQueue] = useState([]);
@@ -513,8 +512,6 @@ Original Size: ${(meta.size / (1024 * 1024)).toFixed(2)}MB`;
     };
   };
 
-  const currentEst = calculateEstimate(selectedItem, activePresetObj);
-
   const handleCompressAll = () => {
     const readyItems = queue.filter((i) => i.status === "ready");
     readyItems.forEach((item) => handleStartProcess(item.id));
@@ -552,16 +549,6 @@ Original Size: ${(meta.size / (1024 * 1024)).toFixed(2)}MB`;
     const newQ = [...queue];
     const temp = newQ[idx - 1];
     newQ[idx - 1] = newQ[idx];
-    newQ[idx] = temp;
-    setQueue(newQ);
-  };
-
-  const handleMoveItemDown = (id) => {
-    const idx = queue.findIndex((q) => q.id === id);
-    if (idx < 0 || idx >= queue.length - 1) return;
-    const newQ = [...queue];
-    const temp = newQ[idx + 1];
-    newQ[idx + 1] = newQ[idx];
     newQ[idx] = temp;
     setQueue(newQ);
   };

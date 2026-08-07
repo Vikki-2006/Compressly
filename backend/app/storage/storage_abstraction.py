@@ -1,7 +1,6 @@
 import os
 import shutil
 
-
 class StorageService:
     @staticmethod
     def save_file(content: bytes, destination: str):

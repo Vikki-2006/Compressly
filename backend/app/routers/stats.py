@@ -5,6 +5,7 @@ from app.analytics.analytics_service import AnalyticsService
 
 router = APIRouter(prefix="/api/stats", tags=["stats"])
 
+
 @router.get("")
 def get_statistics(db: Session = Depends(get_db)):
     """Calculates conversions volume, success ratios, and disk space saved using AnalyticsService."""

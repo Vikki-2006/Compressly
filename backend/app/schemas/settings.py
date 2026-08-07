@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
+
 class SettingsUpdate(BaseModel):
     default_preset: str
     cleanup_threshold_seconds: str

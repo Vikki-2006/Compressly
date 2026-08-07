@@ -6,12 +6,14 @@ from app.schemas.settings import SettingsUpdate
 
 router = APIRouter(prefix="/api/settings")
 
+
 @router.get("")
 def get_settings(db: Session = Depends(get_db)):
     """Fetches all configuration key/value pairs from database settings table."""
     repo = SettingsRepository(db)
     repo.initialize_defaults()
     return repo.get_all()
+
 
 @router.post("")
 def update_settings(payload: SettingsUpdate, db: Session = Depends(get_db)):

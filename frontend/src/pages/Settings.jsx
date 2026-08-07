@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { Settings as SettingsIcon, Server, Database, Save, RotateCcw, AlertTriangle, CheckCircle, RefreshCw } from "lucide-react";
 
+const defaultBackendUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+
 export const Settings = () => {
   const [backendUrl, setBackendUrl] = useState(() => {
-    return localStorage.getItem("compressly_backend_url") || "http://localhost:8000";
+    return localStorage.getItem("compressly_backend_url") || defaultBackendUrl;
   });
   const [defaultPreset, setDefaultPreset] = useState(() => {
     return localStorage.getItem("compressly_default_preset") || "telegram";
@@ -77,7 +79,7 @@ export const Settings = () => {
   };
 
   const handleReset = () => {
-    setBackendUrl("http://localhost:8000");
+    setBackendUrl(defaultBackendUrl);
     setDefaultPreset("telegram");
     setDefaultCodec("h264");
     setDefaultCrf(24);
@@ -135,7 +137,7 @@ export const Settings = () => {
                 type="text"
                 value={backendUrl}
                 onChange={(e) => setBackendUrl(e.target.value)}
-                placeholder="http://localhost:8000"
+                placeholder={defaultBackendUrl}
                 className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-foreground transition-all"
               />
               <p className="text-xs text-muted-foreground">The API endpoint for video uploading and FFmpeg encoding.</p>

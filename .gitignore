@@ -1,0 +1,42 @@
+# Environment
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+
+# Databases
+*.db
+*.sqlite
+
+# Uploads & Generated Files
+uploads/
+compressed/
+temp/
+*.mp4
+
+# Node
+node_modules/
+dist/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Scratch / Dev-only test scripts (not for public release)
+backend/scratch_*.py
+backend/scratch_test_urls.py
+
+# Test output files
+backend/test_out.*
+backend/*.log

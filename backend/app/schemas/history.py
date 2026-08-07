@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 
+
 class HistoryBase(BaseModel):
     id: str
     filename: str
@@ -15,4 +16,4 @@ class HistoryBase(BaseModel):
     task_type: str
 
     class Config:
-        from_attributes = True # Adaptable with SQLAlchemy models (Pydantic v2 style)
+        from_attributes = True  # Adaptable with SQLAlchemy models (Pydantic v2 style)

@@ -10,8 +10,14 @@ export const VideoPreviewModal = ({ item, backendUrl, onClose }) => {
   const origRef = useRef(null);
   const compRef = useRef(null);
 
-  const origSrc = `${backendUrl}/api/static/${item.fileId}.mp4`;
-  const compSrc = `${backendUrl}/api/download/${item.taskId}`;
+  // Use the actual uploaded file extension stored on the item (e.g. ".mov", ".avi").
+  // Falling back to ".mp4" if not set (for backward compat with older queue items).
+  const origExt = item.ext || ".mp4";
+  const origSrc = `${backendUrl}/api/static/${item.fileId}${origExt}`;
+
+  // Use /api/preview/ (not /api/download/) so the file is NOT deleted while the browser
+  // is still loading/playing it. The download endpoint schedules file deletion after 2s.
+  const compSrc = `${backendUrl}/api/preview/${item.taskId}`;
 
   const togglePlay = () => {
     if (isPlaying) {

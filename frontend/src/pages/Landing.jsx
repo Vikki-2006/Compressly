@@ -1,681 +1,723 @@
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
-  ArrowRight, ShieldCheck, Zap, Layers, ChevronDown, 
-  HardDrive, Sliders, Play, Check, TrendingDown, 
-  Download, Upload, SlidersHorizontal, Clock, Layout
+  ArrowRight, 
+  ShieldCheck, 
+  Zap, 
+  Target, 
+  BarChart3, 
+  Upload, 
+  Sliders, 
+  Cpu, 
+  Download, 
+  FileVideo, 
+  Check, 
+  Lock, 
+  Trash2, 
+  Layers, 
+  Server, 
+  Database, 
+  Box,
+  Code2,
+  Sparkles,
+  ArrowDown,
+  Film
 } from "lucide-react";
 
-// Custom Counter Hook component for statistics section
-const AnimatedCounter = ({ 
-  value, 
-  suffix = "", 
-  prefix = "", 
-  duration = 2000 
-}) => {
-  const [count, setCount] = useState(0);
-  const [hasRun, setHasRun] = useState(false);
+export const Landing = ({ setRoute }) => {
+  // Hero Mockup animation cycle: UPLOAD -> COMPRESSING -> COMPLETE
+  const [mockStep, setMockStep] = useState(0);
+  const [mockProgress, setMockProgress] = useState(15);
 
   useEffect(() => {
-    if (hasRun) return;
-    setHasRun(true);
-    let start = 0;
-    const end = value;
-    if (start === end) {
-      setCount(end);
-      return;
-    }
-    const steps = 40;
-    const increment = Math.ceil(end / steps);
-    const stepTime = duration / steps;
     const timer = setInterval(() => {
-      start += increment;
-      if (start >= end) {
-        setCount(end);
-        clearInterval(timer);
-      } else {
-        setCount(start);
-      }
-    }, stepTime);
+      setMockStep((prev) => (prev + 1) % 3);
+    }, 4000);
+
     return () => clearInterval(timer);
-  }, [value, duration, hasRun]);
+  }, []);
 
-  return <span>{prefix}{count}{suffix}</span>;
-};
-
-export const Landing = ({ setRoute }) => {
-  const [openFaq, setOpenFaq] = useState(null);
+  // Progress animation during COMPRESSING state
+  useEffect(() => {
+    if (mockStep === 1) {
+      setMockProgress(20);
+      const progTimer = setInterval(() => {
+        setMockProgress((p) => {
+          if (p >= 78) {
+            clearInterval(progTimer);
+            return 78;
+          }
+          return p + 8;
+        });
+      }, 120);
+      return () => clearInterval(progTimer);
+    }
+  }, [mockStep]);
 
   const startApp = () => {
-    setRoute("#/app");
+    if (setRoute) {
+      setRoute("#/app");
+    }
     window.location.hash = "#/app";
   };
-
-  const toggleFaq = (index) => {
-    setOpenFaq(openFaq === index ? null : index);
-  };
-
-  // Six premium feature cards layout (3x2 matrix)
-  const premiumFeatures = [
-    {
-      icon: Zap,
-      title: "Lightning Fast",
-      description: "Powered by raw hardware-accelerated local FFmpeg pipes. Compress massive gigabyte-scale videos in seconds.",
-    },
-    {
-      icon: ShieldCheck,
-      title: "Privacy First",
-      description: "Your video files stay local. Processing occurs 100% offline, meaning zero exposure to cloud servers or remote APIs.",
-    },
-    {
-      icon: Layers,
-      title: "Batch Compression",
-      description: "Drag-and-drop multiple video files simultaneously. Queue them up to run sequential compression runs in the background.",
-    },
-    {
-      icon: HardDrive,
-      title: "Offline Processing",
-      description: "No internet connection needed. Once active, Compressly executes video optimization completely locally on your host CPU.",
-    },
-    {
-      icon: Sliders,
-      title: "Advanced FFmpeg",
-      description: "Full control over compression settings. Fine-tune container formats, video codecs (H.264), and target bitrates.",
-    },
-    {
-      icon: Layout,
-      title: "Modern Interface",
-      description: "Clean, responsive workspace inspired by Vercel and Linear. Fast workflow transitions with subtle micro-animations.",
-    },
-  ];
-
-  const faqs = [
-    {
-      question: "How does the video compression stay private?",
-      answer: "Unlike other video compression websites that upload your massive file to remote servers (where they could be stored or indexed), Compressly runs its Python FastAPI backend locally. The video processing is done right on the host system utilizing local CPU and memory resources.",
-    },
-    {
-      question: "What formats and codecs are supported?",
-      answer: "We support major containers: MP4, MOV, AVI, and MKV. By default, Compressly transcodes videos to the universal H.264 video codec (via libx264) and AAC audio, ensuring maximum compatibility across web, mobile, and desktop media players.",
-    },
-    {
-      question: "How does the Pause/Resume option work?",
-      answer: "We leverage system-level thread suspension using the Python 'psutil' package. When you click pause, the backend suspends the active FFmpeg execution thread. The CPU usage drops immediately to zero percent. Clicking resume releases the suspension, letting FFmpeg pick up exactly where it left off.",
-    },
-    {
-      question: "Are there size limits on video uploads?",
-      answer: "Since files are uploaded and stored locally, there are no artificial limits! The only constraints are the storage capacity of the host computer running the backend server. It's built to process gigabyte-scale videos without locking up.",
-    },
-  ];
 
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
-      transition: { staggerChildren: 0.12 },
+      transition: { staggerChildren: 0.08 },
     },
   };
 
   const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
+    hidden: { opacity: 0, y: 12 },
+    visible: { 
+      opacity: 1, 
+      y: 0, 
+      transition: { duration: 0.35, ease: [0.25, 0.1, 0.25, 1.0] } 
+    },
   };
 
-  // Gentle float anim for right column badge cards
-  const floatAnim = (delay) => ({
-    animate: {
-      y: [0, -8, 0],
-    },
-    transition: {
-      duration: 6,
-      repeat: Infinity,
-      ease: "easeInOut",
-      delay: delay,
-    },
-  });
-
   return (
-    <div className="font-sans grid-bg min-h-screen text-foreground select-none overflow-x-hidden">
+    <div className="font-sans min-h-screen bg-background text-foreground select-none overflow-x-hidden">
       
-      {/* 1. HERO SECTION (WIDER TWO-COLUMN LAYOUT) */}
-      <section className="relative overflow-hidden pt-24 pb-20 sm:pt-28 sm:pb-24 lg:pt-36 lg:pb-36 border-b border-border/20">
-        {/* Ambient backing glow centered behind the layout */}
-        <div className="absolute top-1/2 left-1/2 -z-10 h-[450px] w-[900px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground/[0.035] dark:bg-foreground/[0.035] blur-[140px] pointer-events-none" />
-        
-        <div className="desktop-container grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+      {/* ==========================================
+          1. HERO SECTION
+         ========================================== */}
+      <section className="relative pt-16 pb-12 md:pt-24 md:pb-20 lg:pt-28 lg:pb-24 border-b border-border/20">
+        {/* Subtle background glow */}
+        <div className="absolute top-1/3 left-1/2 -z-10 h-[360px] w-[650px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground/[0.025] blur-[120px] pointer-events-none" />
+
+        <div className="desktop-container grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
           
-          {/* Left Column: Headline Content */}
-          <div className="lg:col-span-6 flex flex-col items-start text-left space-y-8 relative z-10">
+          {/* Left Column: Hero Text */}
+          <div className="lg:col-span-6 flex flex-col items-start text-left space-y-5">
+            
+            {/* Pill Badge */}
             <motion.div
-              initial={{ opacity: 0, y: -10 }}
+              initial={{ opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
+              transition={{ duration: 0.3 }}
             >
-              <span className="inline-flex items-center rounded-full bg-foreground/[0.04] dark:bg-foreground/[0.08] px-3.5 py-1.5 text-xs font-semibold text-foreground border border-border/40 backdrop-blur-sm">
-                ⚡ Local, Secure & Asynchronous Video Compression
+              <span className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-foreground/[0.03] px-3.5 py-1.5 text-xs font-medium text-foreground backdrop-blur-md">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                High-Performance Local FFmpeg Engine
               </span>
             </motion.div>
 
+            {/* Headline */}
             <motion.h1
-              className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl lg:text-6xl lg:leading-[1.15] tracking-tighter max-w-[580px]"
-              initial={{ opacity: 0, y: 15 }}
+              className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-foreground leading-[1.1] tracking-tighter"
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
+              transition={{ duration: 0.4, delay: 0.1 }}
             >
-              Compress Videos Without{" "}
-              <span className="bg-gradient-to-r from-foreground via-foreground/90 to-foreground/60 bg-clip-text text-transparent">
-                Losing Quality
-              </span>
+              Compress Videos Without Losing Quality
             </motion.h1>
 
+            {/* Description */}
             <motion.p
-              className="max-w-[480px] text-base text-muted-foreground sm:text-lg leading-relaxed"
+              className="text-base sm:text-lg text-muted-foreground leading-relaxed max-w-xl"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
+              transition={{ duration: 0.4, delay: 0.2 }}
             >
-              Compress MP4, MOV, AVI, and MKV files directly in your browser. Powered by an offline Python backend using raw FFmpeg configurations.
+              Privacy-focused video compression tool. Compress MP4, MOV, AVI, and MKV files directly on your machine without third-party cloud uploads.
             </motion.p>
 
+            {/* CTA Button */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.4, delay: 0.3 }}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, delay: 0.3 }}
+              className="pt-1"
             >
               <button
                 onClick={startApp}
-                className="group flex items-center space-x-2.5 rounded-xl bg-foreground px-7 py-4 font-semibold text-background dark:bg-foreground dark:text-background hover:opacity-90 active:scale-98 transition-all shadow-lg"
+                className="group relative inline-flex items-center justify-center space-x-2.5 rounded-xl bg-foreground px-6 py-3.5 text-sm font-semibold text-background dark:bg-foreground dark:text-background hover:opacity-95 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 shadow-md"
               >
                 <span>Launch Workstation</span>
-                <ArrowRight className="h-4.5 w-4.5 group-hover:translate-x-1 transition-transform" />
+                <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform duration-200" />
               </button>
             </motion.div>
           </div>
 
-          {/* Right Column: Interactive App Workstation Mockup */}
+          {/* Right Column: Realistic Product Preview Mockup */}
           <div className="lg:col-span-6 relative flex justify-center items-center">
             
-            {/* Desktop Mockup container */}
-            <div className="relative w-full max-w-[560px] bg-[#111214] border border-border/40 rounded-2xl shadow-2xl overflow-hidden glass p-4 select-none relative z-10">
-              {/* Window controls header bar */}
-              <div className="flex items-center justify-between border-b border-border/10 pb-3 mb-4">
+            <div className="relative w-full max-w-[520px] bg-card border border-border/50 rounded-2xl shadow-xl overflow-hidden glass p-4 select-none">
+              
+              {/* Mock Window Header */}
+              <div className="flex items-center justify-between border-b border-border/20 pb-3 mb-4">
                 <div className="flex space-x-2">
-                  <div className="h-3 w-3 rounded-full bg-red-500/80" />
-                  <div className="h-3 w-3 rounded-full bg-yellow-500/80" />
-                  <div className="h-3 w-3 rounded-full bg-green-500/80" />
+                  <div className="h-3 w-3 rounded-full bg-red-500/70" />
+                  <div className="h-3 w-3 rounded-full bg-yellow-500/70" />
+                  <div className="h-3 w-3 rounded-full bg-green-500/70" />
                 </div>
-                <span className="text-[10px] font-mono text-muted-foreground/60 select-none">/workspace/compressor</span>
+                <span className="text-[11px] font-mono text-muted-foreground/70">compressly — workstation</span>
                 <div className="w-12" />
               </div>
 
-              {/* Active Queue Layout Mockup */}
-              <div className="space-y-3.5">
-                {/* Dashboard statistics summary inside mockup */}
-                <div className="grid grid-cols-3 gap-2 pb-1.5">
-                  <div className="bg-background/40 border border-border/10 p-2.5 rounded-lg text-center">
-                    <span className="block text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Saved Space</span>
-                    <span className="text-sm font-bold text-foreground">84.2 GB</span>
-                  </div>
-                  <div className="bg-background/40 border border-border/10 p-2.5 rounded-lg text-center">
-                    <span className="block text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Ratio</span>
-                    <span className="text-sm font-bold text-green-500">92%</span>
-                  </div>
-                  <div className="bg-background/40 border border-border/10 p-2.5 rounded-lg text-center">
-                    <span className="block text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Queue status</span>
-                    <span className="text-sm font-bold text-yellow-500">Active</span>
-                  </div>
-                </div>
+              {/* Animated Mockup States: UPLOAD -> COMPRESSING -> COMPLETE */}
+              <div className="space-y-4 min-h-[210px] flex flex-col justify-center">
+                <AnimatePresence mode="wait">
+                  {mockStep === 0 && (
+                    <motion.div
+                      key="step-upload"
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.25 }}
+                      className="space-y-3"
+                    >
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span className="font-semibold text-foreground flex items-center gap-1.5">
+                          <Upload className="h-3.5 w-3.5 animate-pulse text-blue-400" /> Uploading media...
+                        </span>
+                        <span className="font-mono text-[11px]">24%</span>
+                      </div>
+                      <div className="bg-background/80 border border-border/30 p-3.5 rounded-xl flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="h-10 w-10 rounded-lg bg-foreground/5 border border-border/30 flex items-center justify-center text-foreground">
+                            <FileVideo className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-semibold text-foreground">interview_final.mp4</h4>
+                            <p className="text-[10px] text-muted-foreground">145.2 MB &bull; Reading video metadata</p>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-semibold bg-foreground/10 px-2 py-0.5 rounded text-foreground">UPLOAD</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-foreground/10 rounded-full overflow-hidden">
+                        <div className="h-full bg-blue-500 w-[24%] transition-all duration-300" />
+                      </div>
+                    </motion.div>
+                  )}
 
-                {/* Queue list item 1 (Active) */}
-                <div className="bg-background/50 border border-border/15 p-3 rounded-xl flex items-center justify-between">
-                  <div className="flex items-center space-x-3.5">
-                    <div className="h-10 w-12 bg-muted/60 border border-border/10 rounded flex items-center justify-center relative overflow-hidden shrink-0">
-                      <div className="absolute bottom-1 right-1 bg-background/80 px-1 rounded text-[8px] font-mono">1080p</div>
-                      <Play className="h-3.5 w-3.5 text-muted-foreground fill-current opacity-60" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-semibold text-foreground truncate max-w-[140px]">interview_final.mp4</h4>
-                      <span className="text-[10px] text-muted-foreground">145.2 MB &bull; Compressing...</span>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-xs font-mono font-bold text-foreground">78%</span>
-                    <div className="w-16 bg-muted/50 h-1.5 rounded-full overflow-hidden mt-1 border border-border/10">
-                      <div className="bg-foreground h-full rounded-full" style={{ width: "78%" }} />
-                    </div>
-                  </div>
-                </div>
+                  {mockStep === 1 && (
+                    <motion.div
+                      key="step-compressing"
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.25 }}
+                      className="space-y-3"
+                    >
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span className="font-semibold text-foreground flex items-center gap-1.5">
+                          <Cpu className="h-3.5 w-3.5 animate-spin text-amber-400" /> Compressing video...
+                        </span>
+                        <span className="font-mono text-[11px] font-bold text-foreground">{mockProgress}%</span>
+                      </div>
+                      <div className="bg-background/80 border border-border/30 p-3.5 rounded-xl flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="h-10 w-10 rounded-lg bg-foreground/5 border border-border/30 flex items-center justify-center text-foreground">
+                            <FileVideo className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-semibold text-foreground">interview_final.mp4</h4>
+                            <p className="text-[10px] text-muted-foreground">145.2 MB &bull; FFmpeg libx264 (CRF 23)</p>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-semibold bg-amber-500/15 text-amber-400 px-2 py-0.5 rounded">COMPRESSING</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-foreground/10 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-foreground transition-all duration-150" 
+                          style={{ width: `${mockProgress}%` }}
+                        />
+                      </div>
+                    </motion.div>
+                  )}
 
-                {/* Queue list item 2 (Completed) */}
-                <div className="bg-background/30 border border-border/10 p-3 rounded-xl flex items-center justify-between opacity-80">
-                  <div className="flex items-center space-x-3.5">
-                    <div className="h-10 w-12 bg-muted/60 border border-border/10 rounded flex items-center justify-center shrink-0">
-                      <Check className="h-3.5 w-3.5 text-green-500" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-semibold text-foreground truncate max-w-[140px]">hero_render.mov</h4>
-                      <span className="text-[10px] text-muted-foreground">42.8 MB &bull; 9.2 MB finished</span>
-                    </div>
-                  </div>
-                  <div className="text-right flex flex-col items-end">
-                    <span className="text-[10px] font-semibold bg-green-500/10 text-green-500 px-2 py-0.5 rounded">Success</span>
-                    <span className="text-[9px] text-muted-foreground mt-1">-82% Savings</span>
-                  </div>
-                </div>
+                  {mockStep === 2 && (
+                    <motion.div
+                      key="step-complete"
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.25 }}
+                      className="space-y-3"
+                    >
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span className="font-semibold text-emerald-400 flex items-center gap-1.5">
+                          <Check className="h-3.5 w-3.5" /> Compression Complete ✓
+                        </span>
+                        <span className="font-bold text-emerald-400 text-xs">93.7% Saved</span>
+                      </div>
+                      <div className="bg-emerald-500/5 border border-emerald-500/30 p-3.5 rounded-xl flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="h-10 w-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                            <Check className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-semibold text-foreground">interview_final.mp4</h4>
+                            <p className="text-[10px] text-muted-foreground">
+                              145.2 MB &rarr; <strong className="text-emerald-400">9.2 MB</strong>
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-bold bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded">COMPLETE</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-emerald-500/20 rounded-full overflow-hidden">
+                        <div className="h-full bg-emerald-500 w-full" />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
-                {/* Mini configuration board mockup */}
-                <div className="border-t border-border/10 pt-3 mt-3 flex items-center justify-between text-[11px] text-muted-foreground">
-                  <div className="flex items-center space-x-1">
-                    <SlidersHorizontal className="h-3.5 w-3.5" />
-                    <span>Preset: <strong>Balanced (CRF 23)</strong></span>
-                  </div>
-                  <span>Codec: <strong>H.264 (libx264)</strong></span>
+                {/* Preset specs footer bar inside mockup */}
+                <div className="border-t border-border/20 pt-2.5 flex items-center justify-between text-[11px] text-muted-foreground">
+                  <span>Preset: <strong className="text-foreground">Balanced (720p)</strong></span>
+                  <span>Codec: <strong className="text-foreground">H.264 / AAC</strong></span>
                 </div>
               </div>
             </div>
 
-            {/* Floating Glass Badges */}
-            <motion.div 
-              className="absolute -top-6 -left-6 z-20 px-3.5 py-2 rounded-xl bg-background/60 border border-border/30 glass flex items-center space-x-2 text-xs font-semibold shadow-md pointer-events-none"
-              {...floatAnim(0)}
-            >
-              <TrendingDown className="h-4 w-4 text-green-500" />
-              <span>92% Size Reduction</span>
-            </motion.div>
-
-            <motion.div 
-              className="absolute -bottom-4 -left-2 z-20 px-3.5 py-2 rounded-xl bg-background/60 border border-border/30 glass flex items-center space-x-2 text-xs font-semibold shadow-md pointer-events-none"
-              {...floatAnim(1.5)}
-            >
-              <ShieldCheck className="h-4 w-4 text-foreground" />
-              <span>Privacy First</span>
-            </motion.div>
-
-            <motion.div 
-              className="absolute top-1/2 -right-8 z-20 px-3.5 py-2 rounded-xl bg-background/60 border border-border/30 glass flex items-center space-x-2 text-xs font-semibold shadow-md pointer-events-none"
-              {...floatAnim(3)}
-            >
-              <Zap className="h-4 w-4 text-foreground" />
+            {/* Floating Status Badges */}
+            <div className="hidden sm:flex absolute -top-4 -left-4 z-20 items-center space-x-2 rounded-xl border border-border/40 bg-card/95 px-3 py-1.5 text-xs font-semibold shadow-lg backdrop-blur-md">
+              <Zap className="h-3.5 w-3.5 text-amber-400" />
               <span>Local Processing</span>
-            </motion.div>
+            </div>
+
+            <div className="hidden sm:flex absolute -bottom-4 -left-2 z-20 items-center space-x-2 rounded-xl border border-border/40 bg-card/95 px-3 py-1.5 text-xs font-semibold shadow-lg backdrop-blur-md">
+              <Lock className="h-3.5 w-3.5 text-emerald-400" />
+              <span>Privacy First</span>
+            </div>
+
+            <div className="hidden sm:flex absolute top-1/2 -right-6 z-20 items-center space-x-2 rounded-xl border border-border/40 bg-card/95 px-3 py-1.5 text-xs font-semibold shadow-lg backdrop-blur-md">
+              <BarChart3 className="h-3.5 w-3.5 text-foreground" />
+              <span>93% Size Reduction</span>
+            </div>
 
           </div>
 
         </div>
       </section>
 
-      {/* 2. FEATURES GRID SECTION (3x2 MATRIX DESIGN) */}
-      <section className="py-24 sm:py-32 border-b border-border/20 bg-foreground/[0.003] dark:bg-foreground/[0.001]">
+
+      {/* ==========================================
+          2. FEATURE STRIP
+         ========================================== */}
+      <section className="py-5 border-b border-border/20 bg-card/30 backdrop-blur-sm">
         <div className="desktop-container">
-          <div className="text-center max-w-3xl mx-auto space-y-5">
-            <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl lg:text-5xl tracking-tighter">
-              Engineered for Modern Teams
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-center text-center">
+            
+            <div className="flex items-center justify-center space-x-2 py-1.5 rounded-lg hover:bg-foreground/[0.02] transition-colors duration-150">
+              <Zap className="h-4 w-4 text-foreground/80 shrink-0" />
+              <span className="text-xs sm:text-sm font-semibold text-foreground/90">Fast Compression</span>
+            </div>
+
+            <div className="flex items-center justify-center space-x-2 py-1.5 rounded-lg hover:bg-foreground/[0.02] transition-colors duration-150">
+              <ShieldCheck className="h-4 w-4 text-foreground/80 shrink-0" />
+              <span className="text-xs sm:text-sm font-semibold text-foreground/90">Privacy First</span>
+            </div>
+
+            <div className="flex items-center justify-center space-x-2 py-1.5 rounded-lg hover:bg-foreground/[0.02] transition-colors duration-150">
+              <Target className="h-4 w-4 text-foreground/80 shrink-0" />
+              <span className="text-xs sm:text-sm font-semibold text-foreground/90">Quality Control</span>
+            </div>
+
+            <div className="flex items-center justify-center space-x-2 py-1.5 rounded-lg hover:bg-foreground/[0.02] transition-colors duration-150">
+              <BarChart3 className="h-4 w-4 text-foreground/80 shrink-0" />
+              <span className="text-xs sm:text-sm font-semibold text-foreground/90">Compression Analytics</span>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+
+      {/* ==========================================
+          3. HOW COMPRESSLY WORKS (Compact Responsive Row)
+         ========================================== */}
+      <section className="py-14 md:py-20 border-b border-border/20">
+        <div className="desktop-container">
+          
+          <div className="text-center max-w-xl mx-auto mb-12 space-y-2">
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
+              How Compressly Works
             </h2>
-            <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
-              We took the raw multithreaded power of high-performance FFmpeg and wrapped it in a pixel-perfect, offline browser interface.
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              Four simple steps from raw media to optimized video.
             </p>
           </div>
 
-          <motion.div
-            className="mt-20 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+          <motion.div 
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5"
             variants={containerVariants}
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
+            viewport={{ once: true, margin: "-40px" }}
           >
-            {premiumFeatures.map((feat, idx) => {
-              const Icon = feat.icon;
+            {[
+              {
+                num: "01",
+                icon: Upload,
+                title: "Upload",
+                description: "Drop your video into Compressly.",
+              },
+              {
+                num: "02",
+                icon: Sliders,
+                title: "Customize",
+                description: "Choose your compression settings.",
+              },
+              {
+                num: "03",
+                icon: Cpu,
+                title: "Compress",
+                description: "FFmpeg processes your video.",
+              },
+              {
+                num: "04",
+                icon: Download,
+                title: "Download",
+                description: "Get your optimized video.",
+              },
+            ].map((step, index) => {
+              const Icon = step.icon;
               return (
                 <motion.div
-                  key={idx}
-                  className="relative rounded-2xl border border-border/40 p-8 dark:bg-card/45 glass hover:shadow-xl hover:border-foreground/20 hover:-translate-y-1 transition-all duration-300 group flex flex-col items-start"
+                  key={index}
                   variants={itemVariants}
+                  className="rounded-xl border border-border/40 bg-card p-5 glass flex flex-col items-start space-y-3 hover:border-border transition-colors duration-200"
                 >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-foreground/5 dark:bg-foreground/10 text-foreground mb-6 group-hover:scale-105 transition-transform duration-300">
-                    <Icon className="h-6 w-6" />
+                  <div className="flex w-full items-center justify-between">
+                    <div className="h-9 w-9 rounded-lg bg-foreground/5 border border-border/30 flex items-center justify-center text-foreground">
+                      <Icon className="h-4.5 w-4.5" />
+                    </div>
+                    <span className="text-xs font-mono font-bold text-muted-foreground/60">{step.num}</span>
                   </div>
-                  <h3 className="text-lg font-bold text-foreground tracking-tight">{feat.title}</h3>
-                  <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
-                    {feat.description}
-                  </p>
-                  
-                  {/* Subtle border glow effect */}
-                  <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 border border-foreground/10 pointer-events-none" />
+
+                  <div>
+                    <h3 className="text-sm font-bold text-foreground">{step.title}</h3>
+                    <p className="mt-1 text-xs text-muted-foreground leading-relaxed">{step.description}</p>
+                  </div>
                 </motion.div>
               );
             })}
           </motion.div>
+
         </div>
       </section>
 
-      {/* 3. PRODUCT SHOWCASE CENTERPIECE */}
-      <section className="py-24 sm:py-32 border-b border-border/20">
-        <div className="desktop-container flex flex-col items-center">
-          <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
-            <span className="text-xs font-semibold text-muted-foreground/80 uppercase tracking-widest block">Core Workstation</span>
-            <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl lg:text-5xl tracking-tighter">
-              A Complete Offline Studio
+
+      {/* ==========================================
+          4. WHY COMPRESSLY?
+         ========================================== */}
+      <section className="py-14 md:py-20 border-b border-border/20 bg-foreground/[0.002]">
+        <div className="desktop-container">
+          
+          <div className="text-center max-w-xl mx-auto mb-12 space-y-2">
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
+              Why Compressly?
             </h2>
-            <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
-              Experience the actual application layout. A fully-fledged video compressor dashboard that runs entirely on your local machine.
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              Designed for speed, visual clarity, and data protection.
             </p>
           </div>
 
-          {/* Large mock display container */}
-          <div className="w-full max-w-[1200px] bg-[#111214] border border-border/40 rounded-2xl shadow-2xl overflow-hidden glass select-none">
-            {/* Header tab controls */}
-            <div className="flex items-center justify-between border-b border-border/10 px-5 py-4 bg-background/30">
-              <div className="flex space-x-2">
-                <div className="h-3 w-3 rounded-full bg-red-500/80" />
-                <div className="h-3 w-3 rounded-full bg-yellow-500/80" />
-                <div className="h-3 w-3 rounded-full bg-green-500/80" />
+          <motion.div 
+            className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-4xl mx-auto"
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-40px" }}
+          >
+            <motion.div 
+              variants={itemVariants}
+              className="rounded-xl border border-border/40 bg-card p-5 glass flex flex-col items-start space-y-2.5"
+            >
+              <div className="h-9 w-9 rounded-lg bg-foreground/5 border border-border/30 flex items-center justify-center text-foreground">
+                <Lock className="h-4.5 w-4.5" />
               </div>
-              <div className="flex items-center space-x-2 border border-border/15 bg-background/50 rounded-lg px-4 py-1 text-[11px] text-muted-foreground w-72 justify-center font-mono">
-                <span>http://localhost:5173/#/app</span>
+              <h3 className="text-sm font-bold text-foreground">Privacy by Design</h3>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                A privacy-focused compression workflow.
+              </p>
+            </motion.div>
+
+            <motion.div 
+              variants={itemVariants}
+              className="rounded-xl border border-border/40 bg-card p-5 glass flex flex-col items-start space-y-2.5"
+            >
+              <div className="h-9 w-9 rounded-lg bg-foreground/5 border border-border/30 flex items-center justify-center text-foreground">
+                <Cpu className="h-4.5 w-4.5" />
               </div>
-              <div className="w-12" />
+              <h3 className="text-sm font-bold text-foreground">FFmpeg Powered</h3>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Professional video processing powered by FFmpeg.
+              </p>
+            </motion.div>
+
+            <motion.div 
+              variants={itemVariants}
+              className="rounded-xl border border-border/40 bg-card p-5 glass flex flex-col items-start space-y-2.5"
+            >
+              <div className="h-9 w-9 rounded-lg bg-foreground/5 border border-border/30 flex items-center justify-center text-foreground">
+                <Target className="h-4.5 w-4.5" />
+              </div>
+              <h3 className="text-sm font-bold text-foreground">Quality First</h3>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Reduce file size while maintaining visual quality.
+              </p>
+            </motion.div>
+          </motion.div>
+
+        </div>
+      </section>
+
+
+      {/* ==========================================
+          5. REAL COMPRESSION RESULTS (BEFORE / AFTER)
+         ========================================== */}
+      <section className="py-14 md:py-20 border-b border-border/20">
+        <div className="desktop-container">
+          
+          <div className="text-center max-w-xl mx-auto mb-12 space-y-2">
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
+              Real Compression Results
+            </h2>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              Maximum storage savings without noticeable visual loss.
+            </p>
+          </div>
+
+          {/* Comparison Card */}
+          <div className="max-w-3xl mx-auto rounded-2xl border border-border/50 bg-card p-6 glass">
+            
+            {/* Header Badge */}
+            <div className="flex justify-center mb-5">
+              <span className="text-[11px] font-semibold text-muted-foreground bg-foreground/5 border border-border/30 px-3 py-1 rounded-full">
+                Balanced &bull; 1080p &bull; H.264
+              </span>
             </div>
 
-            {/* Mock layout columns split */}
-            <div className="grid grid-cols-12 min-h-[480px]">
+            <div className="grid grid-cols-1 md:grid-cols-11 gap-5 items-center">
               
-              {/* Sidebar layout mockup */}
-              <div className="col-span-3 border-r border-border/10 p-5 bg-background/25 space-y-6">
-                <div className="space-y-2">
-                  <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Configure settings</span>
-                  <div className="bg-background/40 border border-border/10 p-3 rounded-xl space-y-4">
-                    
-                    {/* Presets option */}
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] text-muted-foreground font-semibold block">Quality preset</label>
-                      <div className="bg-background/60 border border-border/10 p-2 rounded text-xs text-foreground font-semibold flex justify-between">
-                        <span>Balanced (CRF 23)</span>
-                        <ChevronDown className="h-3 w-3 text-muted-foreground mt-0.5" />
-                      </div>
-                    </div>
-
-                    {/* Output option */}
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] text-muted-foreground font-semibold block">Output format</label>
-                      <div className="bg-background/60 border border-border/10 p-2 rounded text-xs text-foreground font-semibold flex justify-between">
-                        <span>MP4 (Universal)</span>
-                        <ChevronDown className="h-3 w-3 text-muted-foreground mt-0.5" />
-                      </div>
-                    </div>
-
-                    {/* Target Bitrate option */}
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] text-muted-foreground font-semibold block">Custom Bitrate limit</label>
-                      <div className="w-full bg-muted/60 h-1 rounded-full relative mt-2">
-                        <div className="bg-foreground h-full w-2/3 rounded-full relative">
-                          <div className="h-3 w-3 bg-foreground border-2 border-background rounded-full absolute -top-1 right-0 shadow" />
-                        </div>
-                      </div>
-                      <span className="text-[9px] text-muted-foreground text-right block mt-1">12 Mbps</span>
-                    </div>
-
-                  </div>
+              {/* ORIGINAL VIDEO */}
+              <div className="md:col-span-5 rounded-xl border border-border/40 bg-background/60 p-4 space-y-3">
+                <div className="flex items-center justify-between border-b border-border/20 pb-2.5">
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Original Video</span>
+                  <span className="text-[10px] font-mono bg-foreground/10 px-2 py-0.5 rounded text-foreground font-semibold">BEFORE</span>
                 </div>
-
-                <div className="space-y-2">
-                  <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider font-mono">Status indicators</span>
-                  <div className="bg-[#1a1c1e]/40 border border-border/10 p-3 rounded-xl space-y-2 text-[10px] text-muted-foreground font-mono">
-                    <p>&bull; Backend: <span className="text-green-500 font-bold">ONLINE</span></p>
-                    <p>&bull; Database: <span className="text-green-500 font-bold">SQLITE 3</span></p>
-                    <p>&bull; Daemon cleanup: <span className="text-green-500 font-bold">ACTIVE</span></p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Main Panel Content Mockup */}
-              <div className="col-span-9 p-6 space-y-6">
                 
-                {/* Active workspace header mock */}
-                <div className="flex items-center justify-between border-b border-border/10 pb-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="h-8 w-8 rounded-lg bg-foreground/5 flex items-center justify-center text-foreground shrink-0 border border-border/10">
-                      <SlidersHorizontal className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-bold text-foreground">Asynchronous compression workstation</h3>
-                      <p className="text-[10px] text-muted-foreground">Queue files, adjust output preferences, and save space.</p>
-                    </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground text-xs">File Size</span>
+                    <span className="font-bold text-foreground text-base">145.2 MB</span>
                   </div>
-                  
-                  {/* Process Buttons */}
-                  <div className="flex space-x-2">
-                    <div className="bg-muted/80 px-3.5 py-1.5 rounded-lg text-xs font-semibold border border-border/10 text-muted-foreground">Pause All</div>
-                    <div className="bg-foreground text-background dark:bg-foreground dark:text-background px-3.5 py-1.5 rounded-lg text-xs font-semibold border border-border/10 shadow-sm">Compress Queue</div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-muted-foreground">Resolution</span>
+                    <span className="font-medium text-foreground">1920x1080</span>
                   </div>
-                </div>
-
-                {/* Simulated File upload details */}
-                <div className="bg-background/40 border border-border/10 rounded-xl p-5 grid grid-cols-12 gap-6 items-center">
-                  {/* Mock thumbnail representation */}
-                  <div className="col-span-4 h-24 bg-muted/60 border border-border/10 rounded-lg relative overflow-hidden flex items-center justify-center shrink-0">
-                    <Play className="h-6 w-6 text-muted-foreground fill-current opacity-50" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
-                    <div className="absolute bottom-2 left-2 text-[9px] font-semibold text-foreground bg-background/50 px-2 py-0.5 rounded">vacation_trip.mov</div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-muted-foreground">Codec</span>
+                    <span className="font-medium text-foreground">H.264</span>
                   </div>
-
-                  {/* Mock Comparison details stats */}
-                  <div className="col-span-8 space-y-3.5">
-                    <div className="flex items-center justify-between text-xs font-semibold">
-                      <span className="text-muted-foreground">Compression ratio</span>
-                      <span className="text-green-500">89% Space Saved</span>
-                    </div>
-
-                    {/* Progress slider bar representation */}
-                    <div className="w-full bg-muted/50 h-2.5 rounded-full overflow-hidden border border-border/10 relative">
-                      <div className="bg-foreground h-full rounded-full w-4/5" />
-                    </div>
-
-                    {/* Meta stats data */}
-                    <div className="grid grid-cols-4 gap-2 text-[10px] text-muted-foreground">
-                      <div>
-                        <span className="block font-semibold uppercase text-muted-foreground/60">Original</span>
-                        <span className="font-bold text-foreground">845.2 MB</span>
-                      </div>
-                      <div>
-                        <span className="block font-semibold uppercase text-muted-foreground/60">Compressed</span>
-                        <span className="font-bold text-green-500">92.9 MB</span>
-                      </div>
-                      <div>
-                        <span className="block font-semibold uppercase text-muted-foreground/60">Resolution</span>
-                        <span className="font-bold text-foreground">1080p @ 60fps</span>
-                      </div>
-                      <div>
-                        <span className="block font-semibold uppercase text-muted-foreground/60">Codec</span>
-                        <span className="font-bold text-foreground">H.264 (x264)</span>
-                      </div>
-                    </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-muted-foreground">Bitrate</span>
+                    <span className="font-medium text-foreground">18.4 Mbps</span>
                   </div>
                 </div>
+              </div>
 
-                {/* Additional list stack item mockup */}
-                <div className="border border-border/10 rounded-xl p-4 flex items-center justify-between bg-background/20 opacity-80">
-                  <div className="flex items-center space-x-3">
-                    <div className="h-8 w-10 bg-muted/60 border border-border/10 rounded flex items-center justify-center shrink-0">
-                      <Check className="h-4 w-4 text-green-500" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold text-foreground">vlog_tokyo.mkv</h4>
-                      <p className="text-[10px] text-muted-foreground">Original: 1.2 GB &bull; Compressed: 145 MB finished in 42s</p>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-semibold bg-green-500/10 text-green-500 px-3 py-1 rounded">Completed</span>
+              {/* CENTER RATIO INDICATOR */}
+              <div className="md:col-span-1 flex flex-col items-center justify-center py-2 md:py-0">
+                <div className="h-9 w-9 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                  <ArrowRight className="h-4 w-4 hidden md:block" />
+                  <ArrowDown className="h-4 w-4 md:hidden" />
+                </div>
+                <span className="mt-1.5 text-[11px] font-extrabold text-emerald-400 font-mono tracking-tight text-center">
+                  93.7% SMALLER
+                </span>
+              </div>
+
+              {/* COMPRESSED VIDEO */}
+              <div className="md:col-span-5 rounded-xl border border-emerald-500/30 bg-emerald-500/[0.03] p-4 space-y-3">
+                <div className="flex items-center justify-between border-b border-emerald-500/20 pb-2.5">
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">Compressed Video</span>
+                  <span className="text-[10px] font-mono bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-bold">AFTER</span>
                 </div>
 
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground text-xs">File Size</span>
+                    <span className="font-bold text-emerald-400 text-base">9.2 MB</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-muted-foreground">Resolution</span>
+                    <span className="font-medium text-foreground">1920x1080</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-muted-foreground">Codec</span>
+                    <span className="font-medium text-foreground">H.264</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-muted-foreground">Space Saved</span>
+                    <span className="font-bold text-emerald-400">136.0 MB Saved</span>
+                  </div>
+                </div>
               </div>
 
             </div>
 
+            <p className="mt-5 text-center text-[11px] text-muted-foreground/60">
+              * Example compression benchmark for standard 1080p video encoded using the Balanced preset.
+            </p>
+
+          </div>
+
+        </div>
+      </section>
+
+
+      {/* ==========================================
+          6. SUPPORTED FORMATS STRIP
+         ========================================== */}
+      <section className="py-8 border-b border-border/20 bg-foreground/[0.002]">
+        <div className="desktop-container text-center space-y-3">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 block">
+            SUPPORTED FORMATS
+          </span>
+          <div className="flex items-center justify-center gap-3">
+            {["MP4", "MOV", "AVI", "MKV"].map((fmt) => (
+              <span 
+                key={fmt}
+                className="inline-flex items-center space-x-1.5 rounded-lg border border-border/40 bg-card px-3.5 py-1.5 text-xs font-mono font-bold text-foreground backdrop-blur-sm"
+              >
+                <Film className="h-3 w-3 text-muted-foreground" />
+                <span>{fmt}</span>
+              </span>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* 4. HOW IT WORKS SECTION (TIMELINE STEPS MAP) */}
-      <section className="py-24 sm:py-32 border-b border-border/20 bg-foreground/[0.003] dark:bg-foreground/[0.001]">
+
+      {/* ==========================================
+          7. PRIVACY SECTION
+         ========================================== */}
+      <section className="py-14 md:py-20 border-b border-border/20">
         <div className="desktop-container">
-          <div className="text-center max-w-3xl mx-auto mb-20 space-y-4">
-            <span className="text-xs font-semibold text-muted-foreground/80 uppercase tracking-widest block">Process Workflow</span>
-            <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl lg:text-5xl tracking-tighter">
-              Four Steps to Optimization
+          
+          <div className="text-center max-w-xl mx-auto mb-12 space-y-2">
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
+              Your videos stay yours.
             </h2>
-            <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
-              Compressly simplifies FFmpeg pipelines down into an elegant, automated local pipeline structure.
+            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+              Compress videos with a privacy-focused workflow without relying on unnecessary third-party cloud storage.
             </p>
           </div>
 
-          {/* Connected timeline cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 relative">
-            
-            {/* Steps block */}
+          <motion.div 
+            className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-4xl mx-auto"
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-40px" }}
+          >
+            <motion.div 
+              variants={itemVariants}
+              className="rounded-xl border border-border/40 bg-card p-5 glass flex flex-col items-start space-y-2.5"
+            >
+              <div className="h-9 w-9 rounded-lg bg-foreground/5 border border-border/30 flex items-center justify-center text-foreground">
+                <Lock className="h-4.5 w-4.5" />
+              </div>
+              <h3 className="text-sm font-bold text-foreground">Privacy First</h3>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Your files are handled through the designed processing workflow.
+              </p>
+            </motion.div>
+
+            <motion.div 
+              variants={itemVariants}
+              className="rounded-xl border border-border/40 bg-card p-5 glass flex flex-col items-start space-y-2.5"
+            >
+              <div className="h-9 w-9 rounded-lg bg-foreground/5 border border-border/30 flex items-center justify-center text-foreground">
+                <Zap className="h-4.5 w-4.5" />
+              </div>
+              <h3 className="text-sm font-bold text-foreground">Fast Processing</h3>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                FFmpeg-powered compression.
+              </p>
+            </motion.div>
+
+            <motion.div 
+              variants={itemVariants}
+              className="rounded-xl border border-border/40 bg-card p-5 glass flex flex-col items-start space-y-2.5"
+            >
+              <div className="h-9 w-9 rounded-lg bg-foreground/5 border border-border/30 flex items-center justify-center text-foreground">
+                <Trash2 className="h-4.5 w-4.5" />
+              </div>
+              <h3 className="text-sm font-bold text-foreground">Controlled Storage</h3>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Temporary processing files are cleaned up appropriately.
+              </p>
+            </motion.div>
+          </motion.div>
+
+        </div>
+      </section>
+
+
+      {/* ==========================================
+          8. TECHNOLOGY SECTION
+         ========================================== */}
+      <section className="py-12 md:py-16 border-b border-border/20 bg-foreground/[0.002]">
+        <div className="desktop-container text-center space-y-6">
+          
+          <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+            Built with powerful open technology.
+          </h3>
+
+          <div className="flex flex-wrap items-center justify-center gap-2.5 max-w-2xl mx-auto">
             {[
-              {
-                step: "01",
-                icon: Upload,
-                title: "Upload",
-                description: "Drag-and-drop multiple video clips directly into the queue workstation interface.",
-              },
-              {
-                step: "02",
-                icon: SlidersHorizontal,
-                title: "Configure",
-                description: "Select balanced preset configurations or toggle target bitrate sliders.",
-              },
-              {
-                step: "03",
-                icon: Clock,
-                title: "Compress",
-                description: "Start local multithreaded compression, monitor progress, or pause the process.",
-              },
-              {
-                step: "04",
-                icon: Download,
-                title: "Download",
-                description: "Save optimized, lossless-quality outputs directly back to your local folder.",
-              },
-            ].map((st, idx) => {
-              const Icon = st.icon;
-              return (
-                <div key={idx} className="relative bg-background/45 border border-border/40 p-7 rounded-2xl glass hover:shadow-lg transition-all duration-300 group flex flex-col items-start select-none">
-                  {/* Step label index */}
-                  <span className="text-[10px] font-mono font-bold text-muted-foreground/40 absolute top-4 right-4">{st.step}</span>
-                  
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-foreground/5 dark:bg-foreground/10 text-foreground mb-5 shrink-0">
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  
-                  <h3 className="text-base font-bold text-foreground tracking-tight">{st.title}</h3>
-                  <p className="mt-2.5 text-xs text-muted-foreground leading-relaxed">{st.description}</p>
-                </div>
-              );
-            })}
-
-          </div>
-        </div>
-      </section>
-
-      {/* 5. STATISTICS METRIC BADGES WITH COUNTERS */}
-      <section className="py-20 sm:py-24 border-b border-border/20">
-        <div className="desktop-container">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            
-            <div className="bg-background/45 border border-border/30 p-8 rounded-2xl glass text-center flex flex-col items-center">
-              <span className="text-4xl font-extrabold text-foreground tracking-tight mb-2">
-                <AnimatedCounter value={10} suffix="x" />
-              </span>
-              <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Faster encoding</span>
-            </div>
-
-            <div className="bg-background/45 border border-border/30 p-8 rounded-2xl glass text-center flex flex-col items-center">
-              <span className="text-4xl font-extrabold text-foreground tracking-tight mb-2">
-                <AnimatedCounter value={100} suffix="%" />
-              </span>
-              <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Local executions</span>
-            </div>
-
-            <div className="bg-background/45 border border-border/30 p-8 rounded-2xl glass text-center flex flex-col items-center">
-              <span className="text-4xl font-extrabold text-foreground tracking-tight mb-2">
-                <AnimatedCounter value={0} prefix="Zero" />
-              </span>
-              <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Cloud uploads</span>
-            </div>
-
-            <div className="bg-background/45 border border-border/30 p-8 rounded-2xl glass text-center flex flex-col items-center">
-              <span className="text-4xl font-extrabold text-foreground tracking-tight mb-2">
-                <AnimatedCounter value={50} suffix="+" />
-              </span>
-              <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Format combinations</span>
-            </div>
-
-          </div>
-        </div>
-      </section>
-
-      {/* 6. FAQ (TWO-COLUMN GRID ACCORDIONS) */}
-      <section className="py-24 sm:py-32 border-b border-border/20 bg-foreground/[0.003] dark:bg-foreground/[0.001]">
-        <div className="desktop-container">
-          <div className="text-center max-w-3xl mx-auto mb-20 space-y-4">
-            <span className="text-xs font-semibold text-muted-foreground/80 uppercase tracking-widest block">Answers</span>
-            <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl lg:text-5xl tracking-tighter">
-              Frequently Asked Questions
-            </h2>
-            <p className="text-base sm:text-lg text-muted-foreground">
-              Everything you need to know about local execution, compatibility, and threading performance.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-[1400px] mx-auto items-start">
-            {faqs.map((faq, idx) => {
-              const isOpen = openFaq === idx;
+              { name: "React", icon: Code2 },
+              { name: "FastAPI", icon: Server },
+              { name: "Python", icon: Layers },
+              { name: "FFmpeg", icon: Cpu },
+              { name: "SQLite", icon: Database },
+              { name: "Docker", icon: Box },
+            ].map((tech, idx) => {
+              const TechIcon = tech.icon;
               return (
                 <div
                   key={idx}
-                  className="rounded-2xl border border-border/40 overflow-hidden dark:bg-card/30 glass transition-all duration-300"
+                  className="flex items-center space-x-2 rounded-lg border border-border/40 bg-card px-3.5 py-1.5 text-xs font-semibold text-foreground/90 backdrop-blur-sm"
                 >
-                  <button
-                    onClick={() => toggleFaq(idx)}
-                    className="flex w-full items-center justify-between px-6 py-5 text-left text-foreground hover:bg-foreground/[0.02] dark:hover:bg-foreground/[0.01] transition-all"
-                  >
-                    <span className="font-bold tracking-tight text-[15px] sm:text-base">{faq.question}</span>
-                    <ChevronDown
-                      className={`h-5 w-5 text-muted-foreground transition-transform duration-300 ${
-                        isOpen ? "rotate-180 text-foreground" : ""
-                      }`}
-                    />
-                  </button>
-                  {isOpen && (
-                    <div className="border-t border-border/20 px-6 py-5 text-sm text-muted-foreground leading-relaxed bg-foreground/[0.015]">
-                      {faq.answer}
-                    </div>
-                  )}
+                  <TechIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span>{tech.name}</span>
                 </div>
               );
             })}
           </div>
+
         </div>
       </section>
 
-      {/* 7. PREMIUM FINAL CTA SECTION */}
-      <section className="bg-foreground text-background dark:bg-foreground dark:text-background py-24 sm:py-32 text-center relative overflow-hidden">
-        {/* Soft atmospheric radial back-glow */}
-        <div className="absolute top-1/2 left-1/2 -z-10 h-[380px] w-[750px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-background/[0.08] dark:bg-background/[0.08] blur-[100px] pointer-events-none" />
-        
-        <div className="desktop-container relative z-10 flex flex-col items-center space-y-6">
-          <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl lg:text-5xl tracking-tighter max-w-[650px] leading-tight">
-            Ready to optimize your media?
+
+      {/* ==========================================
+          9. FINAL CTA SECTION
+         ========================================== */}
+      <section className="py-20 md:py-28 text-center relative overflow-hidden">
+        <div className="desktop-container relative z-10 flex flex-col items-center space-y-5">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-foreground max-w-xl leading-tight">
+            Ready to compress your videos?
           </h2>
-          <p className="text-muted-foreground max-w-md mx-auto text-base sm:text-lg leading-relaxed">
-            Start processing multiple videos right away with 100% data exposure protection.
+          <p className="text-muted-foreground text-xs sm:text-sm max-w-sm mx-auto">
+            Compress your first video with Compressly.
           </p>
           <button
             onClick={startApp}
-            className="mt-4 inline-flex items-center space-x-2 rounded-xl bg-background px-8 py-4 font-semibold text-foreground dark:bg-background dark:text-foreground hover:opacity-90 hover:scale-[1.01] active:scale-98 transition-all shadow-xl"
+            className="group inline-flex items-center space-x-2.5 rounded-xl bg-foreground px-7 py-3.5 font-semibold text-background dark:bg-foreground dark:text-background hover:opacity-95 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 shadow-md text-sm"
           >
-            <span>Launch Workstation</span>
-            <ArrowRight className="h-4.5 w-4.5" />
+            <span>Launch Compressly</span>
+            <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform duration-200" />
           </button>
         </div>
       </section>

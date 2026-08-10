@@ -60,6 +60,11 @@ class FFmpegService:
                 
         cmd.extend(["-c:v", target_vcodec])
 
+        # Force browser-compatible pixel format.
+        # Without yuv420p, libx264 may output yuv444p or yuvj420p which browsers
+        # cannot decode, causing the video to render as a completely black screen.
+        cmd.extend(["-pix_fmt", "yuv420p"])
+
         # Target x264/x265 preset speed
         preset = options.get("preset", "medium")
         valid_presets = {"ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow"}

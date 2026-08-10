@@ -193,7 +193,12 @@ def compress_video_async(
     # Apply options
     # Codec default: libx264
     cmd.extend(["-c:v", "libx264"])
-    
+
+    # Force browser-compatible pixel format.
+    # Without yuv420p, libx264 may produce yuv444p/yuvj420p which browsers
+    # cannot decode — causing the compressed video to appear completely black.
+    cmd.extend(["-pix_fmt", "yuv420p"])
+
     # CRF vs Video Bitrate
     video_bitrate = options.get("video_bitrate")
     crf = options.get("crf")

@@ -138,6 +138,7 @@ export const AppMain = () => {
         file,
         name: file.name,
         size: file.size,
+        ext,  // store original file extension (e.g. ".mp4", ".mov") for preview URL construction
         uploadProgress: 0,
         status: "uploading",
         progress: 0,
@@ -553,6 +554,20 @@ Original Size: ${(meta.size / (1024 * 1024)).toFixed(2)}MB`;
     setQueue(newQ);
   };
 
+  // handleMoveItemDown was missing — caused ReferenceError crash on first upload
+  const handleMoveItemDown = (id) => {
+    const idx = queue.findIndex((q) => q.id === id);
+    if (idx < 0 || idx >= queue.length - 1) return;
+    const newQ = [...queue];
+    const temp = newQ[idx + 1];
+    newQ[idx + 1] = newQ[idx];
+    newQ[idx] = temp;
+    setQueue(newQ);
+  };
+
+  // currentEst was used in JSX but never computed — caused crash when item selected
+  const currentEst = calculateEstimate(selectedItem, activePresetObj);
+
   const handleOpenFolder = async (taskId) => {
     try {
       const res = await fetch(`${backendUrl}/api/open-folder/${taskId}`, { method: "POST" });
@@ -567,7 +582,7 @@ Original Size: ${(meta.size / (1024 * 1024)).toFixed(2)}MB`;
   };
 
   return (
-    <div className="desktop-container py-8 font-sans space-y-10">
+    <div className="desktop-container pt-14 pb-10 font-sans space-y-10">
       {/* Toast Alert */}
       <AnimatePresence>
         {toastMsg && (

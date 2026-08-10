@@ -1,0 +1,43 @@
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+history.db
+
+# Runtime & output directories
+uploads/
+compressed/
+temp/
+tmp/
+
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+venv/
+.venv/
+env/
+
+# Node / Frontend build artifacts & dependencies
+node_modules/
+dist/
+dist-ssr/
+*.local
+.eslintcache
+
+# Environment & local secrets
+.env
+.env.local
+.env.*.local
+
+# OS / Editor temporary & system files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo

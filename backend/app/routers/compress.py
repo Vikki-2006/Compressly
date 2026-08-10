@@ -450,6 +450,41 @@ def delete_after_download(output_path: str, task_id: str):
     if task_id in active_tasks:
         active_tasks.pop(task_id, None)
 
+@router.get("/preview/{task_id}")
+def preview_output(task_id: str):
+    """Serves the compressed output file for in-browser preview WITHOUT triggering cleanup.
+    The /download endpoint deletes the file after 2 seconds, making it unsafe for <video src>.
+    Use this endpoint for VideoPreviewModal and any other in-app playback.
+    """
+    if task_id not in active_tasks:
+        raise HTTPException(status_code=404, detail="Preview not available: task not found or expired.")
+    task = active_tasks[task_id]
+    if task["status"] != "completed":
+        raise HTTPException(status_code=400, detail=f"File is not ready for preview. Status: {task['status']}")
+
+    output_path = task["output_path"]
+    if not os.path.exists(output_path):
+        raise HTTPException(status_code=410, detail="Preview file has already been cleaned up.")
+
+    ext = os.path.splitext(output_path)[1].lower()
+    media_type = "video/mp4"
+    if ext == ".gif":
+        media_type = "image/gif"
+    elif ext == ".mp3":
+        media_type = "audio/mpeg"
+    elif ext == ".aac":
+        media_type = "audio/aac"
+    elif ext == ".webm":
+        media_type = "video/webm"
+    elif ext == ".mov":
+        media_type = "video/quicktime"
+
+    return FileResponse(
+        path=output_path,
+        media_type=media_type,
+        filename=f"preview_{task['filename']}"
+    )
+
 @router.get("/download/{task_id}")
 def download_output(task_id: str, background_tasks: BackgroundTasks):
     """Serves the output file and registers automatic background cleanup."""

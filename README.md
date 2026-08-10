@@ -34,7 +34,11 @@
 <p align="center">
   <strong>⚡ Fast • 🔒 Private • 🎬 FFmpeg Powered • 📊 Real-Time Analytics • 🐳 Docker Ready</strong>
 </p>
-
+<p align="center">
+  <a href="https://compressly-tool.vercel.app/" target="_blank">
+    <img src="https://img.shields.io/badge/%20Live%20Demo-Compressly-black?style=for-the-badge" alt="Live Demo">
+  </a>
+</p>
 ---
 
 ## ✨ Why Compressly?

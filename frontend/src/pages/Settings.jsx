@@ -3,7 +3,7 @@ import { Settings as SettingsIcon, Server, Database, Save, RotateCcw, AlertTrian
 
 export const Settings = () => {
   const [backendUrl, setBackendUrl] = useState(() => {
-    return localStorage.getItem("compressly_backend_url") || "http://localhost:8000";
+    return localStorage.getItem("compressly_backend_url") || import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
   });
   const [defaultPreset, setDefaultPreset] = useState(() => {
     return localStorage.getItem("compressly_default_preset") || "telegram";
@@ -77,7 +77,7 @@ export const Settings = () => {
   };
 
   const handleReset = () => {
-    setBackendUrl("http://localhost:8000");
+    setBackendUrl(import.meta.env.VITE_BACKEND_URL || "http://localhost:8000");
     setDefaultPreset("telegram");
     setDefaultCodec("h264");
     setDefaultCrf(24);

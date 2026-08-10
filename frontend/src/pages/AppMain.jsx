@@ -34,7 +34,7 @@ import { VideoPreviewModal } from "../components/VideoPreviewModal.jsx";
 import { FFmpegLogModal } from "../components/FFmpegLogModal.jsx";
 
 export const AppMain = () => {
-  const backendUrl = localStorage.getItem("compressly_backend_url") || "http://localhost:8000";
+  const backendUrl = localStorage.getItem("compressly_backend_url") || import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
   const defaultPreset = localStorage.getItem("compressly_default_preset") || "telegram";
 
   const [queue, setQueue] = useState([]);

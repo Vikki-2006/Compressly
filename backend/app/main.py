@@ -83,10 +83,6 @@ def root():
 def healthz():
     return {"status": "ok"}
 
-@app.get("/api/health")
-def api_health():
-    return {"status": "ok"}
-
 # Register routers
 app.include_router(compress.router)
 app.include_router(history.router)

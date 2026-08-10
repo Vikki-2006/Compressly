@@ -3,7 +3,7 @@ import { Settings as SettingsIcon, Server, Database, Save, RotateCcw, AlertTrian
 import { getBackendUrl, DEFAULT_BACKEND_URL } from "../config/api.js";
 
 export const Settings = () => {
-  const [backendUrl, setBackendUrl] = useState(() => getBackendUrl());
+  const backendUrl = getBackendUrl();
   const [defaultPreset, setDefaultPreset] = useState(() => {
     return localStorage.getItem("compressly_default_preset") || "telegram";
   });
@@ -56,10 +56,10 @@ export const Settings = () => {
 
   useEffect(() => {
     fetchHealth();
-  }, [backendUrl]);
+  }, []);
 
   const handleSave = () => {
-    localStorage.setItem("compressly_backend_url", backendUrl);
+    localStorage.removeItem("compressly_backend_url");
     localStorage.setItem("compressly_default_preset", defaultPreset);
     localStorage.setItem("compressly_default_codec", defaultCodec);
     localStorage.setItem("compressly_default_crf", String(defaultCrf));
@@ -76,7 +76,7 @@ export const Settings = () => {
   };
 
   const handleReset = () => {
-    setBackendUrl(DEFAULT_BACKEND_URL);
+    localStorage.removeItem("compressly_backend_url");
     setDefaultPreset("telegram");
     setDefaultCodec("h264");
     setDefaultCrf(24);
@@ -126,19 +126,6 @@ export const Settings = () => {
             <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
               Preferences & Encoder Defaults
             </h2>
-
-            {/* Backend URL */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-foreground">Backend Host URL</label>
-              <input
-                type="text"
-                value={backendUrl}
-                onChange={(e) => setBackendUrl(e.target.value)}
-                placeholder="https://compressly-backend-dasy.onrender.com"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-foreground transition-all"
-              />
-              <p className="text-xs text-muted-foreground">The API endpoint for video uploading and FFmpeg encoding.</p>
-            </div>
 
             <div className="grid grid-cols-2 gap-4">
               {/* Default Preset */}
@@ -356,11 +343,11 @@ export const Settings = () => {
                   <span className="text-muted-foreground">FFmpeg status</span>
                   {systemHealth.ffmpeg?.available ? (
                     <span className="rounded-full bg-green-500/15 text-green-500 px-2 py-0.5 text-xs font-semibold">
-                      Installed
+                      Available
                     </span>
                   ) : (
-                    <span className="rounded-full bg-yellow-500/15 text-yellow-500 px-2 py-0.5 text-xs font-semibold">
-                      Missing
+                    <span className="rounded-full bg-red-500/15 text-red-500 px-2 py-0.5 text-xs font-semibold">
+                      Unavailable
                     </span>
                   )}
                 </div>
@@ -370,11 +357,11 @@ export const Settings = () => {
                   <span className="text-muted-foreground">FFprobe status</span>
                   {systemHealth.ffprobe?.available ? (
                     <span className="rounded-full bg-green-500/15 text-green-500 px-2 py-0.5 text-xs font-semibold">
-                      Installed
+                      Available
                     </span>
                   ) : (
-                    <span className="rounded-full bg-yellow-500/15 text-yellow-500 px-2 py-0.5 text-xs font-semibold">
-                      Missing
+                    <span className="rounded-full bg-red-500/15 text-red-500 px-2 py-0.5 text-xs font-semibold">
+                      Unavailable
                     </span>
                   )}
                 </div>
@@ -415,9 +402,9 @@ export const Settings = () => {
             ) : (
               <div className="flex flex-col items-center justify-center py-6 text-center space-y-2">
                 <AlertTriangle className="h-8 w-8 text-yellow-500" />
-                <h3 className="text-sm font-semibold text-foreground">Backend Disconnected</h3>
+                <h3 className="text-sm font-semibold text-foreground">Backend Offline</h3>
                 <p className="text-xs text-muted-foreground max-w-[200px]">
-                  Unable to poll system health statistics. Ensure the FastAPI backend server is running.
+                  Unable to connect to production API server. Ensure the backend server is running.
                 </p>
               </div>
             )}

@@ -76,6 +76,14 @@ app.add_middleware(
 # Mount uploads/ static directory to serve thumbnails
 app.mount("/api/static", StaticFiles(directory=UPLOADS_DIR), name="static")
 
+@app.get("/healthz")
+def healthz():
+    return {"status": "ok"}
+
+@app.get("/api/health")
+def api_health():
+    return {"status": "ok"}
+
 # Register routers
 app.include_router(compress.router)
 app.include_router(history.router)

@@ -20,12 +20,12 @@ export const Navbar = ({ currentRoute, setRoute }) => {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/40 glass">
+    <header className="sticky top-0 z-50 w-full border-b border-border/40 glass backdrop-blur-md transition-colors duration-200">
       <div className="navbar-container flex h-16 items-center justify-between">
         {/* Logo */}
         <button
           onClick={() => navigateTo("#/")}
-          className="flex items-center space-x-3.5 group hover:opacity-90 transition-opacity"
+          className="flex items-center space-x-3.5 group hover:opacity-90 active:scale-[0.98] transition-all duration-200"
         >
           <div className="relative flex h-9 w-9 items-center justify-center">
             {/* Dark Mode Glow: extremely soft, white/radial, blur 32px */}
@@ -34,7 +34,7 @@ export const Navbar = ({ currentRoute, setRoute }) => {
             <div className="absolute inset-[-18px] rounded-full dark:hidden bg-radial-glow-light filter blur-[28px] animate-aurora-glow pointer-events-none z-0" />
 
             {/* Logo Badge & Icon */}
-            <div className="relative z-10 flex h-9 w-9 items-center justify-center rounded-xl bg-foreground text-background dark:bg-foreground dark:text-background group-hover:scale-105 transition-all shadow-md">
+            <div className="relative z-10 flex h-9 w-9 items-center justify-center rounded-xl bg-foreground text-background dark:bg-foreground dark:text-background group-hover:scale-[1.03] transition-transform duration-200 shadow-md">
               <svg
                 className="h-5 w-5"
                 viewBox="0 0 512 512"
@@ -55,7 +55,7 @@ export const Navbar = ({ currentRoute, setRoute }) => {
         </button>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center space-x-1.5">
+        <nav className="hidden md:flex items-center space-x-1">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = currentRoute === item.route;
@@ -63,9 +63,9 @@ export const Navbar = ({ currentRoute, setRoute }) => {
               <button
                 key={item.route}
                 onClick={() => navigateTo(item.route)}
-                className={`flex items-center space-x-1.5 rounded-lg px-3 py-1.5 font-sans text-sm font-medium transition-all ${
+                className={`flex items-center space-x-2 rounded-xl px-3.5 py-2 font-sans text-sm font-medium transition-all duration-200 ${
                   isActive
-                    ? "bg-foreground/5 text-foreground dark:bg-foreground/10"
+                    ? "bg-foreground/10 text-foreground font-semibold dark:bg-foreground/15 shadow-sm"
                     : "text-muted-foreground hover:text-foreground hover:bg-foreground/5 dark:hover:bg-foreground/5"
                 }`}
               >
@@ -75,12 +75,12 @@ export const Navbar = ({ currentRoute, setRoute }) => {
             );
           })}
 
-          <div className="h-4 w-[1px] bg-border mx-2" />
+          <div className="h-4 w-[1px] bg-border/60 mx-2" />
 
           {/* Theme Toggle */}
           <button
             onClick={toggleTheme}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-all"
+            className="flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground hover:text-foreground hover:bg-foreground/5 dark:hover:bg-foreground/10 transition-all duration-200 active:scale-95"
             aria-label="Toggle theme"
           >
             {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
@@ -91,14 +91,14 @@ export const Navbar = ({ currentRoute, setRoute }) => {
         <div className="flex items-center space-x-2 md:hidden">
           <button
             onClick={toggleTheme}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-all"
+            className="flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-all duration-200"
             aria-label="Toggle theme"
           >
             {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-all"
+            className="flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-all duration-200"
           >
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
@@ -107,7 +107,7 @@ export const Navbar = ({ currentRoute, setRoute }) => {
 
       {/* Mobile Navigation Drawer */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-border/40 bg-background/95 backdrop-blur-md px-4 py-4 space-y-2 animate-in fade-in slide-in-from-top-5 duration-200">
+        <div className="md:hidden border-t border-border/40 bg-background/95 backdrop-blur-md px-4 py-4 space-y-1.5 animate-in fade-in slide-in-from-top-5 duration-200">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = currentRoute === item.route;
@@ -115,9 +115,9 @@ export const Navbar = ({ currentRoute, setRoute }) => {
               <button
                 key={item.route}
                 onClick={() => navigateTo(item.route)}
-                className={`flex w-full items-center space-x-3 rounded-lg px-4 py-3 font-sans text-base font-medium transition-all ${
+                className={`flex w-full items-center space-x-3 rounded-xl px-4 py-3 font-sans text-base font-medium transition-all duration-200 ${
                   isActive
-                    ? "bg-foreground/5 text-foreground dark:bg-foreground/10"
+                    ? "bg-foreground/10 text-foreground font-semibold dark:bg-foreground/15"
                     : "text-muted-foreground hover:text-foreground hover:bg-foreground/5 dark:hover:bg-foreground/5"
                 }`}
               >

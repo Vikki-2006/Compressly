@@ -23,16 +23,16 @@ export const Footer = ({ setRoute }) => {
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm">
             <button
               onClick={() => navigateTo("#/about")}
-              className="text-muted-foreground hover:text-foreground transition-all flex items-center gap-1.5"
+              className="text-muted-foreground hover:text-foreground transition-colors duration-200 flex items-center gap-1.5 focus-visible:ring-1"
             >
-              <HelpCircle className="h-4.5 w-4.5" />
+              <HelpCircle className="h-4 w-4" />
               About
             </button>
             <button
               onClick={() => navigateTo("#/privacy")}
-              className="text-muted-foreground hover:text-foreground transition-all flex items-center gap-1.5"
+              className="text-muted-foreground hover:text-foreground transition-colors duration-200 flex items-center gap-1.5 focus-visible:ring-1"
             >
-              <Shield className="h-4.5 w-4.5" />
+              <Shield className="h-4 w-4" />
               Privacy Policy
             </button>
           </div>

@@ -16,21 +16,21 @@ export const About = () => {
       <div className="mt-12 space-y-12">
         {/* Core Mission */}
         <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="rounded-2xl border border-border/40 p-6 glass">
+          <div className="rounded-2xl border border-border/40 p-6 glass hover:border-border/80 hover:-translate-y-1 transition-all duration-200 transform-gpu shadow-sm hover:shadow-md">
             <Cpu className="h-8 w-8 text-foreground mb-4" />
             <h2 className="text-lg font-semibold text-foreground">Local Computing</h2>
             <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
               We leverage your own CPU and memory architecture to compress videos. Your hardware does the encoding, keeping data local.
             </p>
           </div>
-          <div className="rounded-2xl border border-border/40 p-6 glass">
+          <div className="rounded-2xl border border-border/40 p-6 glass hover:border-border/80 hover:-translate-y-1 transition-all duration-200 transform-gpu shadow-sm hover:shadow-md">
             <ShieldAlert className="h-8 w-8 text-foreground mb-4" />
             <h2 className="text-lg font-semibold text-foreground">Zero Cloud APIs</h2>
             <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
               No cloud storage bucket dependencies, no API keys, and no third-party network transmissions. Your files stay yours.
             </p>
           </div>
-          <div className="rounded-2xl border border-border/40 p-6 glass">
+          <div className="rounded-2xl border border-border/40 p-6 glass hover:border-border/80 hover:-translate-y-1 transition-all duration-200 transform-gpu shadow-sm hover:shadow-md">
             <Award className="h-8 w-8 text-foreground mb-4" />
             <h2 className="text-lg font-semibold text-foreground">FFmpeg Mastery</h2>
             <p className="mt-2 text-sm text-muted-foreground leading-relaxed">

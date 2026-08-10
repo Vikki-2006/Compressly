@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Settings as SettingsIcon, Server, Database, Save, RotateCcw, AlertTriangle, CheckCircle, RefreshCw } from "lucide-react";
+import { getBackendUrl, DEFAULT_BACKEND_URL } from "../config/api.js";
 
 export const Settings = () => {
-  const [backendUrl, setBackendUrl] = useState(() => {
-    return localStorage.getItem("compressly_backend_url") || import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
-  });
+  const [backendUrl, setBackendUrl] = useState(() => getBackendUrl());
   const [defaultPreset, setDefaultPreset] = useState(() => {
     return localStorage.getItem("compressly_default_preset") || "telegram";
   });
@@ -77,7 +76,7 @@ export const Settings = () => {
   };
 
   const handleReset = () => {
-    setBackendUrl(import.meta.env.VITE_BACKEND_URL || "http://localhost:8000");
+    setBackendUrl(DEFAULT_BACKEND_URL);
     setDefaultPreset("telegram");
     setDefaultCodec("h264");
     setDefaultCrf(24);
@@ -135,7 +134,7 @@ export const Settings = () => {
                 type="text"
                 value={backendUrl}
                 onChange={(e) => setBackendUrl(e.target.value)}
-                placeholder="http://localhost:8000"
+                placeholder="https://compressly-backend-dasy.onrender.com"
                 className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-foreground transition-all"
               />
               <p className="text-xs text-muted-foreground">The API endpoint for video uploading and FFmpeg encoding.</p>

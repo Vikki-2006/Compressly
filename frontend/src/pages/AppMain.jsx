@@ -32,9 +32,10 @@ import { BatchControls } from "../components/BatchControls.jsx";
 import { BeforeAfterPanel } from "../components/BeforeAfterPanel.jsx";
 import { VideoPreviewModal } from "../components/VideoPreviewModal.jsx";
 import { FFmpegLogModal } from "../components/FFmpegLogModal.jsx";
+import { getBackendUrl } from "../config/api.js";
 
 export const AppMain = () => {
-  const backendUrl = localStorage.getItem("compressly_backend_url") || import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+  const backendUrl = getBackendUrl();
   const defaultPreset = localStorage.getItem("compressly_default_preset") || "telegram";
 
   const [queue, setQueue] = useState([]);

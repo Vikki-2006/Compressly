@@ -174,8 +174,19 @@ export const AppMain = () => {
     const formData = new FormData();
     formData.append("file", item.file);
 
+    const targetUrl = `${backendUrl}/api/metadata`;
+    console.log("[Compressly Diagnostic] Initiating upload:", {
+      resolvedBackendUrl: backendUrl,
+      targetUrl,
+      method: "POST",
+      fileName: item.name,
+      fileSize: item.size,
+      viteEnvBackendUrl: import.meta.env.VITE_BACKEND_URL || "NOT_SET",
+      localStorageBackendUrl: localStorage.getItem("compressly_backend_url") || "NOT_SET"
+    });
+
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", `${backendUrl}/api/metadata`);
+    xhr.open("POST", targetUrl);
 
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) {
@@ -185,6 +196,7 @@ export const AppMain = () => {
     };
 
     xhr.onload = () => {
+      console.log("[Compressly Diagnostic] Upload response status:", xhr.status, xhr.statusText);
       if (xhr.status === 200) {
         try {
           const res = JSON.parse(xhr.responseText);
@@ -214,7 +226,14 @@ export const AppMain = () => {
       delete activeUploads.current[item.id];
     };
 
-    xhr.onerror = () => {
+    xhr.onerror = (err) => {
+      console.error("[Compressly Diagnostic] Network connection error during upload:", {
+        targetUrl,
+        readyState: xhr.readyState,
+        status: xhr.status,
+        statusText: xhr.statusText,
+        error: err
+      });
       updateItem(item.id, { status: "failed", error: "Network connection lost during upload." });
       triggerToast("Network connection lost during upload.", "error");
       delete activeUploads.current[item.id];

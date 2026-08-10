@@ -73,8 +73,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount uploads/ static directory to serve thumbnails
-app.mount("/api/static", StaticFiles(directory=UPLOADS_DIR), name="static")
+print("LOADED MAIN:", __file__)
+
+@app.get("/")
+def root():
+    return {"status": "ok", "service": "Compressly API", "health": "/healthz"}
 
 @app.get("/healthz")
 def healthz():

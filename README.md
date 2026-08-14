@@ -39,7 +39,7 @@
     <img src="https://img.shields.io/badge/%20Live%20Demo-Compressly-black?style=for-the-badge" alt="Live Demo">
   </a>
 </p>
----
+
 
 ## ✨ Why Compressly?
 

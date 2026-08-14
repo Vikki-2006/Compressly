@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
 from app.database.connection import get_db
 from app.repository.settings_repo import SettingsRepository
 from app.schemas.settings import SettingsUpdate
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/settings")
+
 
 @router.get("")
 def get_settings(db: Session = Depends(get_db)):
@@ -12,6 +13,7 @@ def get_settings(db: Session = Depends(get_db)):
     repo = SettingsRepository(db)
     repo.initialize_defaults()
     return repo.get_all()
+
 
 @router.post("")
 def update_settings(payload: SettingsUpdate, db: Session = Depends(get_db)):

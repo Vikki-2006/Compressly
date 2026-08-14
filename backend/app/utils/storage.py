@@ -1,7 +1,7 @@
 import os
-import time
 import shutil
 import threading
+import time
 
 # Resolve BASE_DIR to the workspace root: C:\...\Video Compressor(Compressly)
 # dirname(__file__) is C:\...\backend\app\utils
@@ -16,11 +16,13 @@ os.makedirs(UPLOADS_DIR, exist_ok=True)
 os.makedirs(COMPRESSED_DIR, exist_ok=True)
 os.makedirs(TEMP_DIR, exist_ok=True)
 
+
 def init_directories():
     """Double checks uploads, compressed, and temp directories exist."""
     os.makedirs(UPLOADS_DIR, exist_ok=True)
     os.makedirs(COMPRESSED_DIR, exist_ok=True)
     os.makedirs(TEMP_DIR, exist_ok=True)
+
 
 def delete_file_safe(file_path: str):
     """Safely removes a file or directory if it exists."""
@@ -32,6 +34,7 @@ def delete_file_safe(file_path: str):
                 os.remove(file_path)
         except Exception as e:
             print(f"[Storage] Failed to delete {file_path}: {e}")
+
 
 def cleanup_loop(max_age_seconds: int = 1800, check_interval_seconds: int = 120):
     """
@@ -46,7 +49,7 @@ def cleanup_loop(max_age_seconds: int = 1800, check_interval_seconds: int = 120)
                 for item in os.listdir(directory):
                     item_path = os.path.join(directory, item)
                     # Ignore system/hidden files
-                    if item.startswith('.'):
+                    if item.startswith("."):
                         continue
                     try:
                         mtime = os.path.getmtime(item_path)
@@ -58,6 +61,7 @@ def cleanup_loop(max_age_seconds: int = 1800, check_interval_seconds: int = 120)
         except Exception as e:
             print(f"[Cleanup] Error in cleanup cycle: {e}")
         time.sleep(check_interval_seconds)
+
 
 def start_cleanup_thread():
     """Launches the automatic directory cleanup thread in the background."""

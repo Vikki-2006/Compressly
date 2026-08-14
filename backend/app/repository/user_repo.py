@@ -1,7 +1,9 @@
-from sqlalchemy.orm import Session
-from app.models.user import UserModel
 import uuid
 from datetime import datetime, timezone
+
+from app.models.user import UserModel
+from sqlalchemy.orm import Session
+
 
 class UserRepository:
     def __init__(self, db: Session):
@@ -28,7 +30,7 @@ class UserRepository:
             hashed_password=hashed_password,
             is_active=True,
             is_admin=False,
-            created_at=datetime.now(timezone.utc).replace(tzinfo=None)
+            created_at=datetime.now(timezone.utc).replace(tzinfo=None),
         )
         self.db.add(user)
         self.db.commit()

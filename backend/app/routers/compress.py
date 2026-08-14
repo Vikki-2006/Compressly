@@ -9,15 +9,28 @@ from app.repository.history_repo import HistoryRepository
 from app.repository.settings_repo import SettingsRepository
 from app.services.ffmpeg_service import FFmpegService
 from app.services.queue_manager import QueueManager
-from app.services.video import (active_tasks, generate_thumbnail,
-                                get_ffmpeg_path, get_ffprobe_path,
-                                get_video_metadata, kill_compression,
-                                resume_compression, suspend_compression)
+from app.services.video import (
+    active_tasks,
+    generate_thumbnail,
+    get_ffmpeg_path,
+    get_ffprobe_path,
+    get_video_metadata,
+    kill_compression,
+    resume_compression,
+    suspend_compression,
+)
 from app.utils.logger import logger
 from app.utils.storage import COMPRESSED_DIR, UPLOADS_DIR, delete_file_safe
 from app.validators.video_validator import VideoValidator
-from fastapi import (APIRouter, BackgroundTasks, Depends, File, Form,
-                     HTTPException, UploadFile)
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    UploadFile,
+)
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session

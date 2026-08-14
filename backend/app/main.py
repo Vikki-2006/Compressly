@@ -3,8 +3,7 @@ from contextlib import asynccontextmanager
 from app.database.connection import Base, engine
 from app.middleware.error_handler import GlobalErrorHandlerMiddleware
 from app.routers import auth, compress, history, settings, stats
-from app.utils.storage import (UPLOADS_DIR, init_directories,
-                               start_cleanup_thread)
+from app.utils.storage import UPLOADS_DIR, init_directories, start_cleanup_thread
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse

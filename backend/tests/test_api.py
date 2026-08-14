@@ -268,8 +268,7 @@ def test_structured_logger():
 
 def test_find_executable_resolver():
     """Verify find_executable correctly resolves executables or returns fallback."""
-    from app.services.video import (find_executable, get_ffmpeg_path,
-                                    get_ffprobe_path)
+    from app.services.video import find_executable, get_ffmpeg_path, get_ffprobe_path
 
     ffmpeg_p = get_ffmpeg_path()
     ffprobe_p = get_ffprobe_path()

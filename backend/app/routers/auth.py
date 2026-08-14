@@ -1,5 +1,9 @@
-from app.auth.auth_service import (create_access_token, get_current_user,
-                                   hash_password, verify_password)
+from app.auth.auth_service import (
+    create_access_token,
+    get_current_user,
+    hash_password,
+    verify_password,
+)
 from app.database.connection import get_db
 from app.models.user import UserModel
 from app.repository.user_repo import UserRepository
